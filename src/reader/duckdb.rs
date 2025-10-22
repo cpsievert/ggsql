@@ -120,12 +120,13 @@ impl Reader for DuckDBReader {
         // Collect all rows into vectors and extract column names from first row
         let mut row_data: Vec<Vec<String>> = Vec::new();
         let mut column_names: Vec<String> = Vec::new();
-        let mut column_count = 0;
+        let column_count: usize;
 
         // Process first row to get column information
-        if let Some(first_row) = rows.next().map_err(|e| {
-            VizqlError::ReaderError(format!("Failed to fetch first row: {}", e))
-        })? {
+        if let Some(first_row) = rows
+            .next()
+            .map_err(|e| VizqlError::ReaderError(format!("Failed to fetch first row: {}", e)))?
+        {
             // Get column count from the row
             column_count = first_row.as_ref().column_count();
 
@@ -138,8 +139,12 @@ impl Reader for DuckDBReader {
             // Get column names from the row
             for i in 0..column_count {
                 column_names.push(
-                    first_row.as_ref().column_name(i)
-                        .map_err(|e| VizqlError::ReaderError(format!("Failed to get column name: {}", e)))?
+                    first_row
+                        .as_ref()
+                        .column_name(i)
+                        .map_err(|e| {
+                            VizqlError::ReaderError(format!("Failed to get column name: {}", e))
+                        })?
                         .to_string(),
                 );
             }
@@ -158,9 +163,10 @@ impl Reader for DuckDBReader {
         }
 
         // Collect remaining rows
-        while let Some(row) = rows.next().map_err(|e| {
-            VizqlError::ReaderError(format!("Failed to fetch row: {}", e))
-        })? {
+        while let Some(row) = rows
+            .next()
+            .map_err(|e| VizqlError::ReaderError(format!("Failed to fetch row: {}", e)))?
+        {
             let mut row_vec = Vec::new();
             for i in 0..column_count {
                 let val = Self::value_to_string(&row, i);
@@ -179,9 +185,8 @@ impl Reader for DuckDBReader {
             series_vec.push(series);
         }
 
-        DataFrame::new(series_vec).map_err(|e| {
-            VizqlError::ReaderError(format!("Failed to create DataFrame: {}", e))
-        })
+        DataFrame::new(series_vec)
+            .map_err(|e| VizqlError::ReaderError(format!("Failed to create DataFrame: {}", e)))
     }
 
     fn validate_columns(&self, sql: &str, columns: &[String]) -> Result<()> {
@@ -189,7 +194,11 @@ impl Reader for DuckDBReader {
         let df = self.execute(sql)?;
 
         // Get column names from the DataFrame
-        let schema_columns: Vec<String> = df.get_column_names().iter().map(|s| s.to_string()).collect();
+        let schema_columns: Vec<String> = df
+            .get_column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
 
         // Check if all required columns exist
         for col in columns {
@@ -283,10 +292,7 @@ mod tests {
 
         reader
             .connection()
-            .execute(
-                "CREATE TABLE sales(region TEXT, revenue REAL)",
-                params![],
-            )
+            .execute("CREATE TABLE sales(region TEXT, revenue REAL)", params![])
             .unwrap();
 
         reader
