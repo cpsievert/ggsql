@@ -47,6 +47,7 @@ proptest = "1.4"
 
 # Utilities
 regex = "1.10"
+chrono = "0.4"
 
 # Web server
 axum = "0.7"

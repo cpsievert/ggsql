@@ -51,9 +51,26 @@ impl DuckDBReader {
             Ok(ValueRef::Decimal(d)) => d.to_string(),
             Ok(ValueRef::Text(s)) => String::from_utf8_lossy(s).to_string(),
             Ok(ValueRef::Blob(b)) => format!("{:?}", b), // Debug format for binary data
-            Ok(ValueRef::Date32(d)) => d.to_string(),
+            Ok(ValueRef::Date32(d)) => {
+                // Convert days since Unix epoch to ISO date string (YYYY-MM-DD)
+                // DuckDB Date32 represents days since 1970-01-01
+                let days = d;
+                let unix_epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                let date = unix_epoch + chrono::Duration::days(days as i64);
+                date.format("%Y-%m-%d").to_string()
+            }
             Ok(ValueRef::Time64(_, t)) => t.to_string(),
-            Ok(ValueRef::Timestamp(_, ts)) => ts.to_string(),
+            Ok(ValueRef::Timestamp(_, ts)) => {
+                // Convert microseconds since Unix epoch to ISO datetime string
+                // DuckDB Timestamp represents microseconds since 1970-01-01 00:00:00 UTC
+                let secs = ts / 1_000_000;
+                let nsecs = ((ts % 1_000_000) * 1000) as u32;
+                let unix_epoch = chrono::DateTime::<chrono::Utc>::from_timestamp(secs, nsecs)
+                    .unwrap_or_else(|| {
+                        chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0).unwrap()
+                    });
+                unix_epoch.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+            }
             // Fallback for any other types or errors
             _ => String::new(),
         }

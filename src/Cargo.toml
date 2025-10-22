@@ -49,6 +49,7 @@ thiserror.workspace = true
 
 # Utilities
 regex.workspace = true
+chrono.workspace = true
 
 # Web server (optional)
 axum = { workspace = true, optional = true }
