@@ -66,6 +66,9 @@ env.bak/
 venv.bak/
 .venv/
 
+# Dev environment
+/_dev/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

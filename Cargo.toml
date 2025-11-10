@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "tree-sitter-vvsql",
-    "src"
+    "src",
+    "vvsql-jupyter"
 ]
 resolver = "2"
 
