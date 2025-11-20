@@ -209,6 +209,15 @@ impl VegaLiteWriter {
                             ScaleType::Inferno | ScaleType::Cividis | ScaleType::Diverging |
                             ScaleType::Sequential => "quantitative", // Color scales
                         }.to_string()
+                    } else if scale.properties.contains_key("domain") {
+                        // If domain is specified without explicit type:
+                        // - For size/opacity: keep quantitative (domain sets range, not categories)
+                        // - For color/x/y: treat as ordinal (discrete categories)
+                        if aesthetic == "size" || aesthetic == "opacity" || aesthetic == "alpha" {
+                            "quantitative".to_string()
+                        } else {
+                            "ordinal".to_string()
+                        }
                     } else {
                         // Scale exists but no type specified, infer from data
                         self.infer_field_type(df, col)
@@ -226,6 +235,56 @@ impl VegaLiteWriter {
                 // Add titles for positional aesthetics
                 if aesthetic == "x" || aesthetic == "y" {
                     encoding["title"] = json!(col);
+                }
+
+                // Apply scale properties from SCALE if specified
+                if let Some(scale) = spec.find_scale(aesthetic) {
+                    use crate::parser::ast::{ScalePropertyValue, ArrayElement};
+                    let mut scale_obj = serde_json::Map::new();
+
+                    // Apply domain
+                    if let Some(domain_prop) = scale.properties.get("domain") {
+                        if let ScalePropertyValue::Array(domain_values) = domain_prop {
+                            let domain_json: Vec<Value> = domain_values.iter().map(|elem| {
+                                match elem {
+                                    ArrayElement::String(s) => json!(s),
+                                    ArrayElement::Number(n) => json!(n),
+                                    ArrayElement::Boolean(b) => json!(b),
+                                }
+                            }).collect();
+                            scale_obj.insert("domain".to_string(), json!(domain_json));
+                        }
+                    }
+
+                    // Apply range (explicit range property takes precedence over palette)
+                    if let Some(range_prop) = scale.properties.get("range") {
+                        if let ScalePropertyValue::Array(range_values) = range_prop {
+                            let range_json: Vec<Value> = range_values.iter().map(|elem| {
+                                match elem {
+                                    ArrayElement::String(s) => json!(s),
+                                    ArrayElement::Number(n) => json!(n),
+                                    ArrayElement::Boolean(b) => json!(b),
+                                }
+                            }).collect();
+                            scale_obj.insert("range".to_string(), json!(range_json));
+                        }
+                    } else if let Some(palette_prop) = scale.properties.get("palette") {
+                        // Apply palette as range (fallback for color scales)
+                        if let ScalePropertyValue::Array(palette_values) = palette_prop {
+                            let range_json: Vec<Value> = palette_values.iter().map(|elem| {
+                                match elem {
+                                    ArrayElement::String(s) => json!(s),
+                                    ArrayElement::Number(n) => json!(n),
+                                    ArrayElement::Boolean(b) => json!(b),
+                                }
+                            }).collect();
+                            scale_obj.insert("range".to_string(), json!(range_json));
+                        }
+                    }
+
+                    if !scale_obj.is_empty() {
+                        encoding["scale"] = json!(scale_obj);
+                    }
                 }
 
                 Ok(encoding)
@@ -649,8 +708,15 @@ impl VegaLiteWriter {
             if let Some(y_enc) = enc_obj.remove("y") {
                 enc_obj.insert("theta".to_string(), y_enc);
             }
-            // x becomes the color/category dimension (if not already mapped)
-            // No change needed - Vega-Lite will use x for categories
+            // Map x to color if not already mapped, and remove x from positional encoding
+            if !enc_obj.contains_key("color") {
+                if let Some(x_enc) = enc_obj.remove("x") {
+                    enc_obj.insert("color".to_string(), x_enc);
+                }
+            } else {
+                // If color is already mapped, just remove x from positional encoding
+                enc_obj.remove("x");
+            }
         } else if theta_aesthetic == "x" {
             // Reversed: x → theta, y → radius
             if let Some(x_enc) = enc_obj.remove("x") {
@@ -2480,9 +2546,12 @@ mod tests {
         assert!(vl_spec["encoding"]["theta"].is_object());
         assert_eq!(vl_spec["encoding"]["theta"]["field"], "value");
 
-        // x should still be present (for categories/colors)
-        assert!(vl_spec["encoding"]["x"].is_object());
-        assert_eq!(vl_spec["encoding"]["x"]["field"], "category");
+        // x should be removed from positional encoding
+        assert!(vl_spec["encoding"]["x"].is_null() || !vl_spec["encoding"].as_object().unwrap().contains_key("x"));
+
+        // x should be mapped to color (for category differentiation)
+        assert!(vl_spec["encoding"]["color"].is_object());
+        assert_eq!(vl_spec["encoding"]["color"]["field"], "category");
     }
 
     #[test]

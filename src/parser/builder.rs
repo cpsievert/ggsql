@@ -416,24 +416,30 @@ fn parse_scale_property_value(node: &Node, source: &str) -> Result<ScaleProperty
                 let mut values = Vec::new();
                 let mut array_cursor = child.walk();
                 for array_child in child.children(&mut array_cursor) {
-                    match array_child.kind() {
-                        "string" => {
-                            let text = get_node_text(&array_child, source);
-                            let unquoted = text.trim_matches(|c| c == '\'' || c == '"');
-                            values.push(ArrayElement::String(unquoted.to_string()));
-                        }
-                        "number" => {
-                            let text = get_node_text(&array_child, source);
-                            if let Ok(num) = text.parse::<f64>() {
-                                values.push(ArrayElement::Number(num));
+                    if array_child.kind() == "array_element" {
+                        // Array elements wrap the actual values
+                        let mut elem_cursor = array_child.walk();
+                        for elem_child in array_child.children(&mut elem_cursor) {
+                            match elem_child.kind() {
+                                "string" => {
+                                    let text = get_node_text(&elem_child, source);
+                                    let unquoted = text.trim_matches(|c| c == '\'' || c == '"');
+                                    values.push(ArrayElement::String(unquoted.to_string()));
+                                }
+                                "number" => {
+                                    let text = get_node_text(&elem_child, source);
+                                    if let Ok(num) = text.parse::<f64>() {
+                                        values.push(ArrayElement::Number(num));
+                                    }
+                                }
+                                "boolean" => {
+                                    let text = get_node_text(&elem_child, source);
+                                    let bool_val = text == "true";
+                                    values.push(ArrayElement::Boolean(bool_val));
+                                }
+                                _ => continue,
                             }
                         }
-                        "boolean" => {
-                            let text = get_node_text(&array_child, source);
-                            let bool_val = text == "true";
-                            values.push(ArrayElement::Boolean(bool_val));
-                        }
-                        _ => continue,
                     }
                 }
                 return Ok(ScalePropertyValue::Array(values));
@@ -715,24 +721,30 @@ fn parse_coord_property_value(node: &Node, source: &str) -> Result<CoordProperty
             let mut values = Vec::new();
             let mut array_cursor = node.walk();
             for array_child in node.children(&mut array_cursor) {
-                match array_child.kind() {
-                    "string" => {
-                        let text = get_node_text(&array_child, source);
-                        let unquoted = text.trim_matches(|c| c == '\'' || c == '"');
-                        values.push(ArrayElement::String(unquoted.to_string()));
-                    }
-                    "number" => {
-                        let text = get_node_text(&array_child, source);
-                        if let Ok(num) = text.parse::<f64>() {
-                            values.push(ArrayElement::Number(num));
+                if array_child.kind() == "array_element" {
+                    // Array elements wrap the actual values
+                    let mut elem_cursor = array_child.walk();
+                    for elem_child in array_child.children(&mut elem_cursor) {
+                        match elem_child.kind() {
+                            "string" => {
+                                let text = get_node_text(&elem_child, source);
+                                let unquoted = text.trim_matches(|c| c == '\'' || c == '"');
+                                values.push(ArrayElement::String(unquoted.to_string()));
+                            }
+                            "number" => {
+                                let text = get_node_text(&elem_child, source);
+                                if let Ok(num) = text.parse::<f64>() {
+                                    values.push(ArrayElement::Number(num));
+                                }
+                            }
+                            "boolean" => {
+                                let text = get_node_text(&elem_child, source);
+                                let bool_val = text == "true";
+                                values.push(ArrayElement::Boolean(bool_val));
+                            }
+                            _ => continue,
                         }
                     }
-                    "boolean" => {
-                        let text = get_node_text(&array_child, source);
-                        let bool_val = text == "true";
-                        values.push(ArrayElement::Boolean(bool_val));
-                    }
-                    _ => continue,
                 }
             }
             Ok(CoordPropertyValue::Array(values))
