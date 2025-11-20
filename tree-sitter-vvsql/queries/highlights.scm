@@ -1,20 +1,9 @@
 ; Tree-sitter highlighting queries for vvSQL
 
-; Keywords
-[
-  "VISUALISE"
-  "AS"
-  "PLOT"
-  "WITH"
-  "SCALE"
-  "FACET"
-  "WRAP"
-  "BY"
-  "COORD"
-  "LABELS"
-  "GUIDE"
-  "THEME"
-] @keyword
+; Note: Keywords are case-insensitive via regex patterns in grammar.js,
+; so we can't match them directly in highlight queries. Instead, we rely
+; on structural matching (e.g., visualise_statement node type) for semantic
+; highlighting.
 
 ; Geom types
 [
@@ -90,11 +79,10 @@
 (coord_property_name) @property
 (guide_property_name) @property
 (theme_property_name) @property
-(parameter_name) @property
 (label_type) @property
 
 ; Operators
 "=" @operator
 
 ; Punctuation
-["," "(" ")" "[" "]"] @punctuation.delimiter
+["," "[" "]"] @punctuation.delimiter

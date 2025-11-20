@@ -1252,4 +1252,61 @@ mod tests {
         assert!(coord.properties.contains_key("theta"));
         assert!(coord.properties.contains_key("color"));
     }
+
+    // ========================================
+    // Case Insensitive Keywords Tests
+    // ========================================
+
+    #[test]
+    fn test_case_insensitive_keywords_lowercase() {
+        let query = r#"
+            visualise as plot
+            with point using x = x, y = y
+            coord cartesian using xlim = [0, 100]
+            label title = 'Test Chart'
+        "#;
+
+        let result = parse_test_query(query);
+        if let Err(ref e) = result {
+            eprintln!("Parse error: {:?}", e);
+        }
+        assert!(result.is_ok());
+        let specs = result.unwrap();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].viz_type, VizType::Plot);
+        assert_eq!(specs[0].layers.len(), 1);
+        assert!(specs[0].coord.is_some());
+        assert!(specs[0].labels.is_some());
+    }
+
+    #[test]
+    fn test_case_insensitive_keywords_mixed() {
+        let query = r#"
+            ViSuAlIsE As PlOt
+            WiTh line UsInG x = date, y = revenue
+            ScAlE x uSiNg type = 'date'
+            ThEmE minimal
+        "#;
+
+        let result = parse_test_query(query);
+        assert!(result.is_ok());
+        let specs = result.unwrap();
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].layers.len(), 1);
+        assert_eq!(specs[0].scales.len(), 1);
+        assert!(specs[0].theme.is_some());
+    }
+
+    #[test]
+    fn test_case_insensitive_american_spelling() {
+        let query = r#"
+            visualize as plot
+            with bar using x = category, y = value
+        "#;
+
+        let result = parse_test_query(query);
+        assert!(result.is_ok());
+        let specs = result.unwrap();
+        assert_eq!(specs.len(), 1);
+    }
 }

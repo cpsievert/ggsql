@@ -455,3 +455,47 @@ COORD USING xlim = [0, 100]
                 (number))
               (array_element
                 (number)))))))))
+
+================================================================================
+Case insensitive keywords
+================================================================================
+
+visualise as plot
+with point using x = x, y = y
+coord cartesian using xlim = [0, 100]
+label title = 'Test'
+
+--------------------------------------------------------------------------------
+
+(query
+  (visualise_statement
+    (viz_type)
+    (viz_clause
+      (with_clause
+        (geom_type)
+        (aesthetic_mapping
+          (aesthetic_name)
+          (aesthetic_value
+            (column_reference
+              (identifier))))
+        (aesthetic_mapping
+          (aesthetic_name)
+          (aesthetic_value
+            (column_reference
+              (identifier))))))
+    (viz_clause
+      (coord_clause
+        (coord_type)
+        (coord_properties
+          (coord_property
+            (coord_property_name)
+            (array
+              (array_element
+                (number))
+              (array_element
+                (number)))))))
+    (viz_clause
+      (label_clause
+        (label_assignment
+          (label_type)
+          (string))))))

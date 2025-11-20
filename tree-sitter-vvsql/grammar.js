@@ -4,6 +4,16 @@
  * Uses a simple regex to capture SQL portion as opaque text
  */
 
+// Helper to create case-insensitive keyword patterns
+function caseInsensitive(keyword) {
+  return new RegExp(
+    keyword
+      .split('')
+      .map(letter => `[${letter.toLowerCase()}${letter.toUpperCase()}]`)
+      .join('')
+  );
+}
+
 module.exports = grammar({
   name: 'vvsql',
 
@@ -14,17 +24,17 @@ module.exports = grammar({
 
     // VISUALISE/VISUALIZE AS <type> with clauses
     visualise_statement: $ => seq(
-      choice('VISUALISE', 'VISUALIZE'),
-      'AS',
+      choice(caseInsensitive('VISUALISE'), caseInsensitive('VISUALIZE')),
+      caseInsensitive('AS'),
       $.viz_type,
       repeat($.viz_clause)
     ),
 
     // Visualization output types
     viz_type: $ => choice(
-      'PLOT',
-      'TABLE',
-      'MAP'
+      caseInsensitive('PLOT'),
+      caseInsensitive('TABLE'),
+      caseInsensitive('MAP')
     ),
 
     // All the visualization clauses (same as current grammar)
@@ -40,12 +50,12 @@ module.exports = grammar({
 
     // WITH clause
     with_clause: $ => seq(
-      'WITH',
+      caseInsensitive('WITH'),
       $.geom_type,
-      'USING',
+      caseInsensitive('USING'),
       $.aesthetic_mapping,
       repeat(seq(',', $.aesthetic_mapping)),
-      optional(seq('AS', $.identifier))
+      optional(seq(caseInsensitive('AS'), $.identifier))
     ),
 
     geom_type: $ => choice(
@@ -88,9 +98,9 @@ module.exports = grammar({
 
     // SCALE clause
     scale_clause: $ => seq(
-      'SCALE',
+      caseInsensitive('SCALE'),
       $.aesthetic_name,
-      'USING',
+      caseInsensitive('USING'),
       optional(seq(
         $.scale_property,
         repeat(seq(',', $.scale_property))
@@ -105,7 +115,7 @@ module.exports = grammar({
 
     scale_property_name: $ => choice(
       'type', 'limits', 'breaks', 'labels', 'expand',
-      'direction', 'na_value', 'palette', 'domain'
+      'direction', 'na_value', 'palette', 'domain', 'range'
     ),
 
     scale_property_value: $ => choice(
@@ -119,17 +129,17 @@ module.exports = grammar({
     facet_clause: $ => choice(
       // FACET row_vars BY col_vars
       seq(
-        'FACET',
+        caseInsensitive('FACET'),
         $.facet_vars,
-        'BY',
+        caseInsensitive('BY'),
         $.facet_vars,
-        optional(seq('USING', 'scales', '=', $.facet_scales))
+        optional(seq(caseInsensitive('USING'), caseInsensitive('scales'), '=', $.facet_scales))
       ),
       // FACET WRAP vars
       seq(
-        'FACET', 'WRAP',
+        caseInsensitive('FACET'), caseInsensitive('WRAP'),
         $.facet_vars,
-        optional(seq('USING', 'scales', '=', $.facet_scales))
+        optional(seq(caseInsensitive('USING'), caseInsensitive('scales'), '=', $.facet_scales))
       )
     ),
 
@@ -144,12 +154,12 @@ module.exports = grammar({
 
     // COORD clause - new syntax: COORD [type] [USING properties]
     coord_clause: $ => seq(
-      'COORD',
+      caseInsensitive('COORD'),
       choice(
         // Type with optional USING: COORD polar USING theta = y
-        seq($.coord_type, optional(seq('USING', $.coord_properties))),
+        seq($.coord_type, optional(seq(caseInsensitive('USING'), $.coord_properties))),
         // Just USING: COORD USING xlim = [0, 100] (defaults to cartesian)
-        seq('USING', $.coord_properties)
+        seq(caseInsensitive('USING'), $.coord_properties)
       )
     ),
 
@@ -176,7 +186,7 @@ module.exports = grammar({
 
     // LABEL clause (repeatable)
     label_clause: $ => seq(
-      'LABEL',
+      caseInsensitive('LABEL'),
       optional(seq(
         $.label_assignment,
         repeat(seq(',', $.label_assignment))
@@ -197,9 +207,9 @@ module.exports = grammar({
 
     // GUIDE clause
     guide_clause: $ => seq(
-      'GUIDE',
+      caseInsensitive('GUIDE'),
       $.aesthetic_name,
-      'USING',
+      caseInsensitive('USING'),
       optional(seq(
         $.guide_property,
         repeat(seq(',', $.guide_property))
@@ -224,16 +234,16 @@ module.exports = grammar({
     // THEME clause
     theme_clause: $ => choice(
       // Just theme name
-      seq('THEME', $.theme_name),
+      seq(caseInsensitive('THEME'), $.theme_name),
       // Theme name with properties
       seq(
-        'THEME', $.theme_name, 'USING',
+        caseInsensitive('THEME'), $.theme_name, caseInsensitive('USING'),
         $.theme_property,
         repeat(seq(',', $.theme_property))
       ),
       // Just properties (custom theme)
       seq(
-        'THEME', 'USING',
+        caseInsensitive('THEME'), caseInsensitive('USING'),
         $.theme_property,
         repeat(seq(',', $.theme_property))
       )
