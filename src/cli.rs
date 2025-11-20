@@ -41,6 +41,10 @@ pub enum Commands {
         /// Output file path
         #[arg(long)]
         output: Option<PathBuf>,
+
+        /// Show verbose output (execution details, statistics)
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Execute a vvSQL query from a file
@@ -59,6 +63,10 @@ pub enum Commands {
         /// Output file path
         #[arg(long)]
         output: Option<PathBuf>,
+
+        /// Show verbose output (execution details, statistics)
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Parse a query and show the AST (for debugging)
@@ -86,20 +94,24 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Exec { query, reader, writer, output } => {
-            println!("Executing query: {}", query);
-            println!("Reader: {}", reader);
-            println!("Writer: {}", writer);
-            if let Some(ref output_file) = output {
-                println!("Output: {}", output_file.display());
+        Commands::Exec { query, reader, writer, output, verbose } => {
+            if verbose {
+                eprintln!("Executing query: {}", query);
+                eprintln!("Reader: {}", reader);
+                eprintln!("Writer: {}", writer);
+                if let Some(ref output_file) = output {
+                    eprintln!("Output: {}", output_file.display());
+                }
             }
 
             // Split query into SQL and vvSQL portions
             match parser::split_query(&query) {
                 Ok((sql_part, viz_part)) => {
-                    println!("\nQuery split:");
-                    println!("  SQL portion: {} chars", sql_part.len());
-                    println!("  vvSQL portion: {} chars", viz_part.len());
+                    if verbose {
+                        eprintln!("\nQuery split:");
+                        eprintln!("  SQL portion: {} chars", sql_part.len());
+                        eprintln!("  vvSQL portion: {} chars", viz_part.len());
+                    }
 
                     // Execute SQL portion using the reader
                     #[cfg(feature = "duckdb")]
@@ -108,14 +120,18 @@ fn main() -> anyhow::Result<()> {
                             Ok(db_reader) => {
                                 match db_reader.execute(&sql_part) {
                                     Ok(df) => {
-                                        println!("\nQuery executed successfully!");
-                                        println!("Result shape: {:?}", df.shape());
-                                        println!("Columns: {:?}", df.get_column_names());
+                                        if verbose {
+                                            eprintln!("\nQuery executed successfully!");
+                                            eprintln!("Result shape: {:?}", df.shape());
+                                            eprintln!("Columns: {:?}", df.get_column_names());
+                                        }
 
                                         // Parse vvSQL portion
                                         match parser::parse_query(&query) {
                                             Ok(specs) => {
-                                                println!("\nParsed {} visualization spec(s)", specs.len());
+                                                if verbose {
+                                                    eprintln!("\nParsed {} visualization spec(s)", specs.len());
+                                                }
 
                                                 // Generate visualization output using writer
                                                 #[cfg(feature = "vegalite")]
@@ -129,15 +145,19 @@ fn main() -> anyhow::Result<()> {
                                                                 if let Some(output_path) = &output {
                                                                     // Write to file
                                                                     match std::fs::write(output_path, &json_output) {
-                                                                        Ok(_) => println!("\nVega-Lite JSON written to: {}", output_path.display()),
+                                                                        Ok(_) => {
+                                                                            if verbose {
+                                                                                eprintln!("\nVega-Lite JSON written to: {}", output_path.display());
+                                                                            }
+                                                                        }
                                                                         Err(e) => {
                                                                             eprintln!("Failed to write output file: {}", e);
                                                                             std::process::exit(1);
                                                                         }
                                                                     }
                                                                 } else {
-                                                                    // Print to stdout
-                                                                    println!("\n{}", json_output);
+                                                                    // Print to stdout (always output the result)
+                                                                    println!("{}", json_output);
                                                                 }
                                                             }
                                                             Err(e) => {
@@ -160,8 +180,8 @@ fn main() -> anyhow::Result<()> {
                                                 }
 
                                                 if writer != "vegalite" {
-                                                    println!("\nNote: Writer '{}' not yet implemented", writer);
-                                                    println!("Available writers: vegalite");
+                                                    eprintln!("\nNote: Writer '{}' not yet implemented", writer);
+                                                    eprintln!("Available writers: vegalite");
                                                 }
                                             }
                                             Err(e) => {
@@ -200,12 +220,14 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
-        Commands::Run { file, reader, writer, output } => {
-            println!("Running query from file: {}", file.display());
-            println!("Reader: {}", reader);
-            println!("Writer: {}", writer);
-            if let Some(ref output_file) = output {
-                println!("Output: {}", output_file.display());
+        Commands::Run { file, reader, writer, output, verbose } => {
+            if verbose {
+                eprintln!("Running query from file: {}", file.display());
+                eprintln!("Reader: {}", reader);
+                eprintln!("Writer: {}", writer);
+                if let Some(ref output_file) = output {
+                    eprintln!("Output: {}", output_file.display());
+                }
             }
 
             // Read query from file
@@ -214,9 +236,11 @@ fn main() -> anyhow::Result<()> {
                     // Execute the query (reuse exec logic)
                     match parser::split_query(&query) {
                         Ok((sql_part, viz_part)) => {
-                            println!("\nQuery split:");
-                            println!("  SQL portion: {} chars", sql_part.len());
-                            println!("  vvSQL portion: {} chars", viz_part.len());
+                            if verbose {
+                                eprintln!("\nQuery split:");
+                                eprintln!("  SQL portion: {} chars", sql_part.len());
+                                eprintln!("  vvSQL portion: {} chars", viz_part.len());
+                            }
 
                             // Execute SQL portion using the reader
                             #[cfg(feature = "duckdb")]
@@ -225,14 +249,18 @@ fn main() -> anyhow::Result<()> {
                                     Ok(db_reader) => {
                                         match db_reader.execute(&sql_part) {
                                             Ok(df) => {
-                                                println!("\nQuery executed successfully!");
-                                                println!("Result shape: {:?}", df.shape());
-                                                println!("Columns: {:?}", df.get_column_names());
+                                                if verbose {
+                                                    eprintln!("\nQuery executed successfully!");
+                                                    eprintln!("Result shape: {:?}", df.shape());
+                                                    eprintln!("Columns: {:?}", df.get_column_names());
+                                                }
 
                                                 // Parse vvSQL portion
                                                 match parser::parse_query(&query) {
                                                     Ok(specs) => {
-                                                        println!("\nParsed {} visualization spec(s)", specs.len());
+                                                        if verbose {
+                                                            eprintln!("\nParsed {} visualization spec(s)", specs.len());
+                                                        }
 
                                                         // Generate visualization output using writer
                                                         #[cfg(feature = "vegalite")]
@@ -246,15 +274,19 @@ fn main() -> anyhow::Result<()> {
                                                                         if let Some(output_path) = &output {
                                                                             // Write to file
                                                                             match std::fs::write(output_path, &json_output) {
-                                                                                Ok(_) => println!("\nVega-Lite JSON written to: {}", output_path.display()),
+                                                                                Ok(_) => {
+                                                                                    if verbose {
+                                                                                        eprintln!("\nVega-Lite JSON written to: {}", output_path.display());
+                                                                                    }
+                                                                                }
                                                                                 Err(e) => {
                                                                                     eprintln!("Failed to write output file: {}", e);
                                                                                     std::process::exit(1);
                                                                                 }
                                                                             }
                                                                         } else {
-                                                                            // Print to stdout
-                                                                            println!("\n{}", json_output);
+                                                                            // Print to stdout (always output the result)
+                                                                            println!("{}", json_output);
                                                                         }
                                                                     }
                                                                     Err(e) => {
@@ -277,8 +309,8 @@ fn main() -> anyhow::Result<()> {
                                                         }
 
                                                         if writer != "vegalite" {
-                                                            println!("\nNote: Writer '{}' not yet implemented", writer);
-                                                            println!("Available writers: vegalite");
+                                                            eprintln!("\nNote: Writer '{}' not yet implemented", writer);
+                                                            eprintln!("Available writers: vegalite");
                                                         }
                                                     }
                                                     Err(e) => {
