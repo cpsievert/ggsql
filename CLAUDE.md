@@ -62,46 +62,6 @@ VISUALISE FROM monthly_totals AS PLOT
 WITH line USING x = month, y = total
 ```
 
-**Behind the scenes**: The splitter automatically injects `SELECT * FROM <source>` before passing to the database.
-
-### Validation Rules
-
-The parser enforces strict rules about when `VISUALISE FROM` can be used:
-
-**✅ Valid:**
-- `VISUALISE FROM table AS PLOT` - Direct table (injected SELECT)
-- `WITH cte AS (...) VISUALISE FROM cte AS PLOT` - CTE without trailing SELECT
-- `SELECT ... VISUALISE AS PLOT` - Traditional pattern
-- `WITH cte AS (...) SELECT * FROM cte VISUALISE AS PLOT` - CTE with explicit SELECT
-
-**❌ Invalid (Parse Error):**
-- `SELECT * FROM x VISUALISE FROM y AS PLOT` - Cannot mix SELECT with VISUALISE FROM
-- `WITH cte AS (...) SELECT * FROM cte VISUALISE FROM cte AS PLOT` - Trailing SELECT conflicts
-- `CREATE TABLE x AS SELECT 1; WITH cte AS (...) VISUALISE FROM cte AS PLOT` - Cannot use after CREATE/INSERT/UPDATE/DELETE
-- `INSERT INTO x VALUES (1) VISUALISE FROM x AS PLOT` - VISUALISE FROM only allowed standalone or after WITH
-
-**Rationale**:
-1. Prevents ambiguity about which data source to visualize
-2. VISUALISE FROM is designed for two use cases: direct table visualization or CTE visualization
-3. Other SQL statements (CREATE, INSERT, UPDATE, DELETE) don't produce meaningful result sets to visualize
-
-### Implementation Details
-
-**1. Grammar Changes** (`tree-sitter-ggsql/grammar.js`):
-- Line 71-77: Updated `with_statement` to include `optional($.select_statement)`, allowing WITH to be followed by SELECT as a compound statement
-- Lines 158-172: Made `subquery` rule fully recursive to support complex SQL (VALUES, nested subqueries)
-
-**2. Query Splitter** (`src/parser/splitter.rs`):
-- Lines 60-87: Checks for VISUALISE FROM and injects `SELECT * FROM <source>`
-- Validates that VISUALISE FROM is only used standalone or after WITH statements
-- Errors if VISUALISE FROM appears after CREATE, INSERT, UPDATE, or DELETE statements
-- WITH followed by SELECT: no semicolon needed (compound statement)
-
-**3. AST Builder Validation** (`src/parser/builder.rs`):
-- Lines 43-50: Validates VISUALISE FROM usage after parsing
-- Lines 1058-1072: Recursive validation to detect trailing SELECT in compound statements
-- `with_statement_has_trailing_select()` helper distinguishes internal CTEs from trailing SELECT
-
 ---
 
 ## System Architecture
@@ -178,63 +138,9 @@ The parser enforces strict rules about when `VISUALISE FROM` can be used:
 - Properly handles semicolons between SQL statements
 
 **Key Features:**
+
 1. **Byte offset splitting**: Uses character positions instead of parse tree node boundaries
 2. **SELECT injection**: Automatically adds `SELECT * FROM <source>` when VISUALISE FROM is used
-3. **Validation**: Ensures VISUALISE FROM is only used standalone or after WITH statements
-
-```rust
-pub fn split_query(query: &str) -> Result<(String, String)> {
-    // Parse with tree-sitter to find VISUALISE statements
-    let tree = parser.parse(query, None)?;
-    let root = tree.root_node();
-
-    // Find first VISUALISE statement by byte offset
-    let first_viz_start: Option<usize> = root.children(&mut root.walk())
-        .find(|n| n.kind() == "visualise_statement")
-        .map(|n| n.start_byte());
-
-    // Split at byte offset (robust to parse errors)
-    let (sql_text, viz_text) = if let Some(viz_start) = first_viz_start {
-        let sql_part = &query[..viz_start];
-        let viz_part = &query[viz_start..];
-        (sql_part.trim().to_string(), viz_part.trim().to_string())
-    } else {
-        (query.to_string(), String::new())
-    };
-
-    // Check for VISUALISE FROM and inject SELECT if needed
-    let mut modified_sql = sql_text.clone();
-    for child in root.children(&mut root.walk()) {
-        if child.kind() == "visualise_statement" {
-            if let Some(from_identifier) = extract_from_identifier(&child, query) {
-                // Inject SELECT * FROM <source>
-                if modified_sql.trim().is_empty() {
-                    // Standalone VISUALISE FROM - inject SELECT
-                    modified_sql = format!("SELECT * FROM {}", from_identifier);
-                } else {
-                    // VISUALISE FROM can only be used after WITH statements
-                    let trimmed = modified_sql.trim();
-                    if !trimmed.to_uppercase().starts_with("WITH") {
-                        return Err(GgsqlError::ParseError(
-                            "VISUALISE FROM can only be used standalone or after WITH statements."
-                        ));
-                    }
-                    // WITH followed by SELECT - no semicolon needed (compound statement)
-                    modified_sql = format!("{} SELECT * FROM {}", trimmed, from_identifier);
-                }
-                break;
-            }
-        }
-    }
-
-    Ok((modified_sql, viz_text))
-}
-```
-
-**Why byte offset splitting?**
-- Complex SQL queries may have parse errors (we don't fully parse SQL)
-- Byte offset splitting works even when SQL portion has ERROR nodes
-- More robust than relying on clean parse tree node boundaries
 
 #### Tree-sitter Integration (`mod.rs`)
 
@@ -248,6 +154,7 @@ pub fn split_query(query: &str) -> Result<(String, String)> {
 **Grammar Structure** (`tree-sitter-ggsql/grammar.js`):
 
 Key grammar rules:
+
 - `query`: Root node containing SQL + VISUALISE portions
 - `sql_portion`: Zero or more SQL statements before VISUALISE
 - `with_statement`: WITH clause with optional trailing SELECT (compound statement)
@@ -255,6 +162,7 @@ Key grammar rules:
 - `visualise_statement`: VISUALISE AS/FROM clause with viz_type and clauses
 
 **Critical Grammar Features**:
+
 1. **Compound WITH statements**: `WITH cte AS (...) SELECT * FROM cte` parses as single statement
 2. **Recursive subqueries**: `SELECT * FROM (SELECT * FROM (VALUES (1, 2)))` fully supported
 3. **VISUALISE FROM extraction**: Grammar identifies FROM identifier for SELECT injection
@@ -269,81 +177,6 @@ pub fn parse_query(query: &str) -> Result<Vec<VizSpec>> {
     Ok(specs)
 }
 ```
-
-#### AST Builder (`builder.rs`)
-
-- Converts tree-sitter CST → typed AST (`VizSpec` structure)
-- Handles multiple visualization specifications per query
-- **Validates VISUALISE FROM semantics**: Checks for SELECT+VISUALISE FROM conflicts
-- Validates grammar structure during parsing
-
-**Validation Logic**:
-
-The builder performs semantic validation that cannot be done in the grammar:
-
-1. **Check last SQL statement type**: Determines if query ends with SELECT
-2. **Recursive WITH validation**: Distinguishes between internal CTEs and trailing SELECT
-3. **VISUALISE FROM validation**: Errors if `VISUALISE FROM` used after SELECT statement
-
-```rust
-pub fn build_ast(tree: &Tree, source: &str) -> Result<Vec<VizSpec>> {
-    let root = tree.root_node();
-
-    // Extract SQL portion and check if last statement is SELECT
-    let sql_portion_node = root.children(&mut root.walk())
-        .find(|n| n.kind() == "sql_portion");
-
-    let last_is_select = if let Some(sql_node) = sql_portion_node {
-        check_last_statement_is_select(&sql_node)
-    } else {
-        false
-    };
-
-    // Build VizSpec for each VISUALISE statement
-    let mut specs = Vec::new();
-    for child in root.children(&mut root.walk()) {
-        if child.kind() == "visualise_statement" {
-            let spec = build_visualise_statement(&child, source)?;
-
-            // Validate VISUALISE FROM usage
-            if spec.source.is_some() && last_is_select {
-                return Err(GgsqlError::ParseError(
-                    "Cannot use VISUALISE FROM when the last SQL statement is SELECT. \
-                     Use either 'SELECT ... VISUALISE AS' or remove the SELECT and use \
-                     'VISUALISE FROM ... AS'.".to_string()
-                ));
-            }
-
-            specs.push(spec);
-        }
-    }
-
-    Ok(specs)
-}
-
-/// Check if a with_statement has a trailing SELECT (after the CTE definitions)
-fn with_statement_has_trailing_select(with_node: &Node) -> bool {
-    let mut cursor = with_node.walk();
-    let mut seen_cte_definition = false;
-
-    for child in with_node.children(&mut cursor) {
-        if child.kind() == "cte_definition" {
-            seen_cte_definition = true;
-        } else if child.kind() == "select_statement" && seen_cte_definition {
-            // This is a SELECT after CTE definitions (trailing SELECT)
-            return true;
-        }
-    }
-
-    false
-}
-```
-
-**Why Recursive Validation?**
-
-The grammar treats `WITH cte AS (SELECT 1)` as a single statement where the internal SELECT is part of the CTE definition. The validation must distinguish between:
-- `WITH cte AS (SELECT 1)` - No trailing SELECT, VISUALISE FROM allowed
-- `WITH cte AS (SELECT 1) SELECT * FROM cte` - Has trailing SELECT, VISUALISE FROM not allowed
 
 #### AST Types (`ast.rs`)
 
@@ -474,6 +307,7 @@ pub struct Theme {
 **Key Methods**:
 
 **VizSpec methods:**
+
 - `VizSpec::new(viz_type)` - Create a new empty VizSpec
 - `VizSpec::find_scale(aesthetic)` - Look up scale specification for an aesthetic
 - `VizSpec::find_layer(name)` - Find a layer by name
@@ -482,6 +316,7 @@ pub struct Theme {
 - `VizSpec::layer_count()` - Get the number of layers
 
 **Layer methods:**
+
 - `Layer::new(geom)` - Create a new layer with a geom
 - `Layer::with_name(name)` - Set the layer name (builder pattern)
 - `Layer::with_aesthetic(aesthetic, value)` - Add an aesthetic mapping (builder pattern)
@@ -491,6 +326,7 @@ pub struct Theme {
 - `Layer::validate_required_aesthetics()` - Validate that required aesthetics are present for the geom type
 
 **Type conversions:**
+
 - JSON serialization/deserialization for all AST types via Serde
 
 #### Error Handling (`error.rs`)
@@ -575,44 +411,6 @@ pub trait Reader {
 - SQL execution → Polars DataFrame conversion
 - Comprehensive type handling
 
-**Type Conversions**:
-
-```rust
-fn value_to_string(value: &ValueRef) -> String {
-    match value {
-        // Basic types
-        Ok(ValueRef::Int32(i)) => i.to_string(),
-        Ok(ValueRef::Int64(i)) => i.to_string(),
-        Ok(ValueRef::Double(f)) => f.to_string(),
-        Ok(ValueRef::Text(s)) => String::from_utf8_lossy(s).to_string(),
-
-        // Date/Time conversions (CRITICAL for proper visualization)
-        Ok(ValueRef::Date32(d)) => {
-            // Convert days since Unix epoch to ISO date (YYYY-MM-DD)
-            let unix_epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-            let date = unix_epoch + chrono::Duration::days(d as i64);
-            date.format("%Y-%m-%d").to_string()
-        },
-        Ok(ValueRef::Timestamp(_, ts)) => {
-            // Convert microseconds since Unix epoch to ISO datetime
-            let secs = ts / 1_000_000;
-            let nsecs = ((ts % 1_000_000) * 1000) as u32;
-            let unix_epoch = chrono::DateTime::<chrono::Utc>::from_timestamp(secs, nsecs)
-                .unwrap();
-            unix_epoch.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
-        },
-        _ => String::new(),
-    }
-}
-```
-
-**Why Date/Time Conversion Matters**:
-
-- DuckDB stores dates as `Date32` (days since 1970-01-01)
-- DuckDB stores timestamps as `Timestamp` (microseconds since epoch)
-- Without conversion, dates appear as numbers (e.g., `19727.0`)
-- ISO format enables proper temporal axis formatting in Vega-Lite
-
 **Connection Parsing** (`connection.rs`):
 
 ```rust
@@ -627,6 +425,7 @@ pub fn parse_connection_string(uri: &str) -> Result<ConnectionInfo> {
 The codebase includes connection string parsing and feature flags for additional readers, but they are not yet implemented:
 
 - **PostgreSQL Reader** (`postgres://...`)
+
   - Feature flag: `postgres`
   - Connection string parsing exists in `connection.rs`
   - Reader implementation: Not yet available
@@ -715,89 +514,6 @@ impl Writer for VegaLiteWriter {
     }
 }
 ```
-
-**Key Mappings**:
-
-**Geom → Vega Mark**:
-
-```rust
-fn geom_to_mark(&self, geom: &Geom) -> Value {
-    json!(match geom {
-        Geom::Point => "point",
-        Geom::Line => "line",
-        Geom::Bar => "bar",
-        Geom::Area => "area",
-        Geom::Tile => "rect",
-        Geom::Text => "text",
-        _ => "point" // fallback
-    })
-}
-```
-
-**Scale Type → Vega Field Type** (CRITICAL for date formatting):
-
-```rust
-fn build_encoding_channel(&self, aesthetic: &str, value: &AestheticValue,
-                          df: &DataFrame, spec: &VizSpec) -> Result<Value> {
-    match value {
-        AestheticValue::Column(col) => {
-            // Check for explicit SCALE specification
-            let field_type = if let Some(scale) = spec.find_scale(aesthetic) {
-                if let Some(scale_type) = &scale.scale_type {
-                    match scale_type {
-                        ScaleType::Linear | ScaleType::Log10 | ScaleType::Sqrt => "quantitative",
-                        ScaleType::Ordinal | ScaleType::Categorical => "nominal",
-                        ScaleType::Date | ScaleType::DateTime | ScaleType::Time => "temporal",
-                        _ => "quantitative"
-                    }
-                } else {
-                    self.infer_field_type(df, col) // Auto-detect from DataFrame
-                }
-            } else {
-                self.infer_field_type(df, col)
-            };
-
-            Ok(json!({
-                "field": col,
-                "type": field_type
-            }))
-        }
-        AestheticValue::Literal(val) => {
-            // Direct value (e.g., color = 'blue')
-            Ok(json!({"value": val}))
-        }
-    }
-}
-```
-
-**Multi-Layer Axis Labels Fix** (Critical bug fix):
-
-```rust
-// In multi-layer code path, apply axis labels to EACH layer
-for layer in &spec.layers {
-    let mut encoding = self.build_encoding(layer, df, spec)?;
-
-    // Override axis titles from LABEL clause
-    if let Some(labels) = &spec.labels {
-        if let Some(x_label) = labels.labels.get("x") {
-            if let Some(x_enc) = encoding.get_mut("x") {
-                x_enc["title"] = json!(x_label);
-            }
-        }
-        if let Some(y_label) = labels.labels.get("y") {
-            if let Some(y_enc) = encoding.get_mut("y") {
-                y_enc["title"] = json!(y_label);
-            }
-        }
-    }
-}
-```
-
-**Why This Matters**:
-
-- Without scale type mapping, dates display as numbers
-- Without multi-layer axis labels, custom axis titles disappear when adding layers
-- These fixes enable proper temporal visualization and consistent labeling
 
 ---
 
@@ -923,6 +639,7 @@ ggsql validate query.sql
 **Architecture**:
 
 The Jupyter kernel implements the Jupyter messaging protocol to:
+
 1. Receive ggSQL query code from notebook cells
 2. Maintain a persistent in-memory DuckDB session
 3. Execute queries using the ggSQL engine
@@ -1020,28 +737,33 @@ ggSQL uses Cargo feature flags to enable optional functionality and reduce binar
 ### Available Features
 
 **Default features** (`default = ["duckdb", "sqlite", "vegalite"]`):
+
 - `duckdb` - DuckDB reader (fully implemented)
 - `sqlite` - SQLite reader (planned, not implemented)
 - `vegalite` - Vega-Lite writer (fully implemented)
 
 **Reader features**:
+
 - `duckdb` - Enable DuckDB database reader
 - `postgres` - Enable PostgreSQL reader (planned, not implemented)
 - `sqlite` - Enable SQLite reader (planned, not implemented)
 - `all-readers` - Enable all reader implementations
 
 **Writer features**:
+
 - `vegalite` - Enable Vega-Lite JSON writer (default)
 - `ggplot2` - Enable R/ggplot2 code generation (planned, not implemented)
 - `plotters` - Enable plotters-based rendering (planned, not implemented)
 - `all-writers` - Enable all writer implementations
 
 **API features**:
+
 - `rest-api` - Enable REST API server (`ggsql-rest` binary)
   - Includes: `axum`, `tokio`, `tower-http`, `tracing`, `duckdb`, `vegalite`
   - Required for building `ggsql-rest` server
 
 **Future features**:
+
 - `python` - Python bindings via PyO3 (planned)
 
 ### Building with Custom Features
@@ -1063,6 +785,7 @@ cargo build --all-features
 ### Feature Dependencies
 
 **Feature flag → Dependencies mapping**:
+
 - `duckdb` → `duckdb` crate
 - `postgres` → `postgres` crate (future)
 - `sqlite` → `rusqlite` crate (future)
@@ -1226,14 +949,17 @@ COORD USING <properties>
 **Properties by Type**:
 
 **Cartesian**:
+
 - `xlim = [min, max]` - Set x-axis limits
 - `ylim = [min, max]` - Set y-axis limits
 - `<aesthetic> = [values...]` - Set domain for any aesthetic (color, fill, size, etc.)
 
 **Flip**:
+
 - `<aesthetic> = [values...]` - Set domain for any aesthetic
 
 **Polar**:
+
 - `theta = <aesthetic>` - Which aesthetic maps to angle (defaults to `y`)
 - `<aesthetic> = [values...]` - Set domain for any aesthetic
 
@@ -1245,6 +971,7 @@ COORD USING <properties>
 4. **Multi-layer support**: All coordinate transforms apply to all layers
 
 **Status**:
+
 - ✅ **Cartesian**: Fully implemented and tested
 - ✅ **Flip**: Fully implemented and tested
 - ✅ **Polar**: Fully implemented and tested
@@ -1436,122 +1163,3 @@ VizSpec {
 - Temporal x-axis with proper date formatting
 - Color-coded regions
 - Interactive tooltips
-
----
-
-## Data Flow Example
-
-### Input Query
-
-```sql
-SELECT '2024-01-01'::DATE + INTERVAL (n) DAY as date,
-       n * 10 as revenue
-FROM generate_series(0, 30) as t(n)
-VISUALISE AS PLOT
-WITH line USING x = date, y = revenue
-SCALE x USING type = 'date'
-LABEL title = 'Revenue Growth', x = 'Date', y = 'Revenue ($)'
-```
-
-### Step-by-Step Transformation
-
-**1. Query Split**
-
-```
-SQL: "SELECT '2024-01-01'::DATE + INTERVAL (n) DAY as date, n * 10 as revenue FROM generate_series(0, 30) as t(n)"
-VIZ: "VISUALISE AS PLOT WITH line USING x = date, y = revenue SCALE x USING type = 'date' LABEL title = 'Revenue Growth', x = 'Date', y = 'Revenue ($)'"
-```
-
-**2. DuckDB Execution**
-
-```
-Query Result (DuckDB internal):
-┌────────────┬─────────┐
-│ date       │ revenue │
-│ Timestamp  │ Int64   │
-├────────────┼─────────┤
-│ 1704067200 │ 0       │  (microseconds)
-│ 1704153600 │ 10      │
-│ 1704240000 │ 20      │
-└────────────┴─────────┘
-```
-
-**3. Type Conversion** (DuckDB Reader)
-
-```
-DataFrame (Polars):
-┌────────────┬─────────┐
-│ date       │ revenue │
-│ String     │ Int64   │
-├────────────┼─────────┤
-│ "2024-01-01T00:00:00.000Z" │ 0       │
-│ "2024-01-02T00:00:00.000Z" │ 10      │
-│ "2024-01-03T00:00:00.000Z" │ 20      │
-└────────────────────────────┴─────────┘
-```
-
-**4. AST Parsing**
-
-```rust
-VizSpec {
-    viz_type: Plot,
-    layers: [
-        Layer {
-            geom: Line,
-            aesthetics: {
-                "x": Column("date"),
-                "y": Column("revenue")
-            }
-        }
-    ],
-    scales: [
-        Scale { aesthetic: "x", scale_type: Some(Date) }
-    ],
-    labels: Labels {
-        labels: {
-            "title": "Revenue Growth",
-            "x": "Date",
-            "y": "Revenue ($)"
-        }
-    }
-}
-```
-
-**5. Vega-Lite Output**
-
-```json
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "title": "Revenue Growth",
-  "data": {
-    "values": [
-      { "date": "2024-01-01T00:00:00.000Z", "revenue": 0 },
-      { "date": "2024-01-02T00:00:00.000Z", "revenue": 10 },
-      { "date": "2024-01-03T00:00:00.000Z", "revenue": 20 }
-    ]
-  },
-  "mark": "line",
-  "encoding": {
-    "x": {
-      "field": "date",
-      "type": "temporal",
-      "title": "Date"
-    },
-    "y": {
-      "field": "revenue",
-      "type": "quantitative",
-      "title": "Revenue ($)"
-    }
-  },
-  "width": 600,
-  "autosize": { "type": "fit", "contains": "padding" }
-}
-```
-
-**6. Visual Output**
-
-- Line chart with temporal x-axis
-- Dates formatted as "Jan 1", "Jan 2", "Jan 3"
-- Y-axis shows revenue values
-- Chart title: "Revenue Growth"
-- Axis labels: "Date" and "Revenue ($)"
