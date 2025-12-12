@@ -10,23 +10,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-  steps:
-    - name: Check out repository
-      uses: actions/checkout@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Install tree sitter
-      run: npm install -g tree-sitter-cli
+      - name: Install tree sitter
+        run: npm install -g tree-sitter-cli
 
-    - name: Regenerate parser
-      working-directory: tree-sitter-ggsql
-      run: tree-sitter generate
+      - name: Regenerate parser
+        working-directory: tree-sitter-ggsql
+        run: tree-sitter generate
 
-    - name: Build with cargo
-      run: cargo build --verbose
+      - name: Build with cargo
+        run: cargo build --verbose
 
-    - name: Run tests
-      if: success()
-      run: cargo test --verbose
+      - name: Run tests
+        if: success()
+        run: cargo test --verbose
