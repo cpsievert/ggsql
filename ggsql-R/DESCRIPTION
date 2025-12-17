@@ -2,7 +2,8 @@ Package: ggsql
 Title: A SQL extension for declarative data visualization based on the Grammar of Graphics
 Version: 0.0.0.9000
 Authors@R: c(
-    person("George", "Stagg", , "george.stagg@posit.co", role = c("aut", "cre")),
+    person("George", "Stagg", , "george.stagg@posit.co", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0006-3173-9846")),
     person("Thomas Lin", "Pedersen", , "thomas.pedersen@posit.co", role = "aut",
            comment = c(ORCID = "0000-0002-5147-4711")),
     person("Teun", "van den Brand", , "teun.vandenbrand@posit.co", role = "aut",
