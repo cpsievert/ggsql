@@ -1,3 +1,7 @@
+skip_if_not_installed("png")
+skip_if_not_installed("rsvg")
+skip_if_not_installed("V8")
+
 test_that("engine can handle a query", {
 
   data_file <- tempfile(fileext = ".csv")
@@ -18,7 +22,8 @@ test_that("engine can handle a query", {
   out <- ggsql_engine(opts)
 
   # We expect path to png file here, since output format for knitr is undetermined
-  expect_vector(out, character(), size = 1)
+  expect_type(out, "character")
+  expect_length(out, 1L)
 })
 
 test_that("we can knit a mixed-chunk document", {
