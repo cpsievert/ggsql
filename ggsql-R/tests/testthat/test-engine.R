@@ -20,3 +20,25 @@ test_that("engine can handle a query", {
   # We expect path to png file here, since output format for knitr is undetermined
   expect_vector(out, character(), size = 1)
 })
+
+test_that("we can knit a mixed-chunk document", {
+  skip_if_not_installed("withr")
+
+  # Create a temporary working directory that will be deleted after this test
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+
+  # We're copying the test file to working directory so side-effects,
+  # like creating new figure folders, are contained
+  basename <- "test_chunks.qmd"
+  doc <- system.file(basename, package = "ggsql")
+  in_file <- file.path(dir, basename)
+  file.copy(doc, in_file)
+
+  out_file <- file.path(dir, "test_chunks.md")
+
+  out <- knitr::knit(input = in_file, output = out_file, quiet = TRUE)
+  expect_equal(out_file, out)
+
+  expect_snapshot_file(out)
+})
