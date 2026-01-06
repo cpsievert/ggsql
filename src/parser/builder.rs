@@ -44,8 +44,8 @@ pub fn build_ast(tree: &Tree, source: &str) -> Result<Vec<VizSpec>> {
             if spec.source.is_some() && last_is_select {
                 return Err(GgsqlError::ParseError(
                     "Cannot use VISUALISE FROM when the last SQL statement is SELECT. \
-                     Use either 'SELECT ... VISUALISE AS' or remove the SELECT and use \
-                     'VISUALISE FROM ... AS'.".to_string()
+                     Use either 'SELECT ... VISUALISE' or remove the SELECT and use \
+                     'VISUALISE FROM ...'.".to_string()
                 ));
             }
 
@@ -2676,8 +2676,8 @@ mod tests {
     #[test]
     fn test_partition_by_single_column() {
         let query = r#"
-            VISUALISE AS PLOT
-            DRAW line MAPPING date AS x, value AS y PARTITION BY category
+            VISUALISE date AS x, value AS y
+            DRAW line PARTITION BY category
         "#;
 
         let result = parse_test_query(query);
@@ -2691,8 +2691,8 @@ mod tests {
     #[test]
     fn test_partition_by_multiple_columns() {
         let query = r#"
-            VISUALISE AS PLOT
-            DRAW line MAPPING date AS x, value AS y PARTITION BY category, region
+            VISUALISE date AS x, value AS y
+            DRAW line PARTITION BY category, region
         "#;
 
         let result = parse_test_query(query);
@@ -2707,7 +2707,7 @@ mod tests {
     #[test]
     fn test_partition_by_with_other_clauses() {
         let query = r#"
-            VISUALISE AS PLOT
+            VISUALISE
             DRAW line MAPPING date AS x, value AS y SETTING opacity TO 0.5 PARTITION BY category FILTER year > 2020
         "#;
 
@@ -2725,8 +2725,8 @@ mod tests {
     #[test]
     fn test_no_partition_by() {
         let query = r#"
-            VISUALISE AS PLOT
-            DRAW line MAPPING date AS x, value AS y
+            VISUALISE date AS x, value AS y
+            DRAW line
         "#;
 
         let result = parse_test_query(query);
@@ -2739,8 +2739,8 @@ mod tests {
     #[test]
     fn test_partition_by_case_insensitive() {
         let query = r#"
-            VISUALISE AS PLOT
-            DRAW line MAPPING date AS x, value AS y partition by category
+            VISUALISE date AS x, value AS y
+            DRAW line partition by category
         "#;
 
         let result = parse_test_query(query);
@@ -2750,7 +2750,7 @@ mod tests {
         assert_eq!(specs[0].layers[0].partition_by.len(), 1);
         assert_eq!(specs[0].layers[0].partition_by[0], "category");
     }
-    
+
     // ========================================
     // Global Mapping Resolution Integration Tests
     // ========================================

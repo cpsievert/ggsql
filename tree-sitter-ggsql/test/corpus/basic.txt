@@ -293,7 +293,7 @@ DRAW point MAPPING x AS x FILTER a = 1 OR b = 2
 DRAW with all clauses
 ================================================================================
 
-VISUALISE AS PLOT
+VISUALISE
 DRAW point MAPPING x AS x, y AS y SETTING opacity TO 0.5 FILTER year > 2020
 
 --------------------------------------------------------------------------------
@@ -704,8 +704,8 @@ DRAW point MAPPING date AS x, profit AS y
 PARTITION BY single column
 ================================================================================
 
-VISUALISE AS PLOT
-DRAW line MAPPING x AS x, y AS y PARTITION BY category
+VISUALISE x AS x, y AS y
+DRAW line PARTITION BY category
 
 --------------------------------------------------------------------------------
 
@@ -734,8 +734,8 @@ DRAW line MAPPING x AS x, y AS y PARTITION BY category
 PARTITION BY multiple columns
 ================================================================================
 
-VISUALISE AS PLOT
-DRAW line MAPPING x AS x, y AS y PARTITION BY category, region
+VISUALISE x AS x, y AS y
+DRAW line PARTITION BY category, region
 
 --------------------------------------------------------------------------------
 
@@ -765,8 +765,8 @@ DRAW line MAPPING x AS x, y AS y PARTITION BY category, region
 PARTITION BY with SETTING and FILTER
 ================================================================================
 
-VISUALISE AS PLOT
-DRAW line MAPPING x AS x, y AS y SETTING opacity TO 0.5 PARTITION BY category FILTER year > 2020
+VISUALISE x AS x, y AS y
+DRAW line SETTING opacity TO 0.5 PARTITION BY category FILTER year > 2020
 
 --------------------------------------------------------------------------------
 

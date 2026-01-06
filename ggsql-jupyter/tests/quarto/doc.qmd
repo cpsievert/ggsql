@@ -185,9 +185,8 @@ LABEL title = 'Total Revenue by Category', x = 'Category', y = 'Total Revenue ($
 
 ```{ggsql}
 SELECT * FROM 'sales.csv'
-VISUALISE AS PLOT
+VISUALISE sale_date AS x, revenue AS y
 DRAW line
-    MAPPING sale_date AS x, revenue AS y
     PARTITION BY category
 ```
 
