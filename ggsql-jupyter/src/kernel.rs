@@ -611,6 +611,7 @@ impl KernelServer {
 }
 
 /// Check if ggSQL code is complete (balanced brackets, not in a string)
+/// If the code contains VISUALISE, it must also contain at least one DRAW layer
 fn is_code_complete(code: &str) -> bool {
     let trimmed = code.trim();
 
@@ -648,6 +649,16 @@ fn is_code_complete(code: &str) -> bool {
         }
     }
 
-    // Code is complete if all brackets are balanced and we're not in a string
-    !in_string && paren_depth == 0 && bracket_depth == 0 && brace_depth == 0
+    // Code is incomplete if brackets are unbalanced or we're in a string
+    if in_string || paren_depth != 0 || bracket_depth != 0 || brace_depth != 0 {
+        return false;
+    }
+
+    // If code contains VISUALISE/VISUALIZE, it must also contain DRAW
+    let upper = trimmed.to_uppercase();
+    if upper.contains("VISUALISE") || upper.contains("VISUALIZE") {
+        return upper.contains("DRAW");
+    }
+
+    true
 }
