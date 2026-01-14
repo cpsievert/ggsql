@@ -28,6 +28,10 @@ pub struct KernelServer {
     session: String,
     execution_count: u32,
     key: Vec<u8>,
+    // Positron comm IDs
+    variables_comm_id: Option<String>,
+    ui_comm_id: Option<String>,
+    plot_comm_id: Option<String>,
 }
 
 impl KernelServer {
@@ -85,6 +89,9 @@ impl KernelServer {
             session,
             execution_count: 0,
             key,
+            variables_comm_id: None,
+            ui_comm_id: None,
+            plot_comm_id: None,
         };
 
         // Send initial "starting" status on IOPub
@@ -153,6 +160,10 @@ impl KernelServer {
             "kernel_info_request" => self.send_kernel_info(&jupyter_msg, &identities).await?,
             "execute_request" => self.execute(&jupyter_msg, &identities).await?,
             "is_complete_request" => self.is_complete(&jupyter_msg, &identities).await?,
+            "comm_open" => self.handle_comm_open(&jupyter_msg, &identities).await?,
+            "comm_msg" => self.handle_comm_msg(&jupyter_msg, &identities).await?,
+            "comm_info_request" => self.handle_comm_info(&jupyter_msg, &identities).await?,
+            "comm_close" => self.handle_comm_close(&jupyter_msg, &identities).await?,
             _ => {
                 tracing::warn!("Unhandled message type: {}", msg_type);
             }
@@ -302,16 +313,21 @@ impl KernelServer {
                 // Per Jupyter spec: execute_result includes execution_count
                 if !silent {
                     let display_data = format_display_data(exec_result);
-                    self.send_iopub(
-                        "execute_result",
-                        json!({
-                            "execution_count": self.execution_count,
-                            "data": display_data["data"],
-                            "metadata": display_data["metadata"]
-                        }),
-                        parent,
-                    )
-                    .await?;
+
+                    // Build message content, including output_location if present
+                    let mut content = json!({
+                        "execution_count": self.execution_count,
+                        "data": display_data["data"],
+                        "metadata": display_data["metadata"]
+                    });
+
+                    // Add output_location for Positron routing (e.g., to Plots pane)
+                    if let Some(location) = display_data.get("output_location") {
+                        content["output_location"] = location.clone();
+                        tracing::info!("Setting output_location: {}", location);
+                    }
+
+                    self.send_iopub("execute_result", content, parent).await?;
                 }
 
                 // Send execute_reply
@@ -401,6 +417,272 @@ impl KernelServer {
         .await?;
 
         // Send status: idle
+        self.send_status("idle", parent).await?;
+        Ok(())
+    }
+
+    /// Handle comm_open - a client wants to open a comm channel
+    async fn handle_comm_open(
+        &mut self,
+        parent: &JupyterMessage,
+        _identities: &[Vec<u8>],
+    ) -> Result<()> {
+        let target_name = parent.content["target_name"].as_str().unwrap_or("");
+        let comm_id = parent.content["comm_id"].as_str().unwrap_or("");
+        let data = &parent.content["data"];
+
+        tracing::info!(
+            "COMM_OPEN: target_name={}, comm_id={}, data={}",
+            target_name,
+            comm_id,
+            serde_json::to_string(data).unwrap_or_default()
+        );
+
+        self.send_status("busy", parent).await?;
+
+        match target_name {
+            "positron.variables" => {
+                tracing::info!("Registering positron.variables comm: {}", comm_id);
+                self.variables_comm_id = Some(comm_id.to_string());
+
+                // Send initial refresh event with empty variables
+                self.send_iopub(
+                    "comm_msg",
+                    json!({
+                        "comm_id": comm_id,
+                        "data": {
+                            "jsonrpc": "2.0",
+                            "method": "refresh",
+                            "params": {
+                                "variables": [],
+                                "length": 0,
+                                "version": 0
+                            }
+                        }
+                    }),
+                    parent,
+                )
+                .await?;
+                tracing::info!("Sent initial variables refresh event");
+            }
+            "positron.ui" => {
+                tracing::info!("Registering positron.ui comm: {}", comm_id);
+                self.ui_comm_id = Some(comm_id.to_string());
+            }
+            _ => {
+                tracing::warn!("Unknown comm target: {}", target_name);
+            }
+        }
+
+        self.send_status("idle", parent).await?;
+        Ok(())
+    }
+
+    /// Handle comm_msg - a message on an existing comm channel
+    async fn handle_comm_msg(
+        &mut self,
+        parent: &JupyterMessage,
+        identities: &[Vec<u8>],
+    ) -> Result<()> {
+        let comm_id = parent.content["comm_id"].as_str().unwrap_or("");
+        let data = &parent.content["data"];
+
+        tracing::info!(
+            "COMM_MSG: comm_id={}, data={}",
+            comm_id,
+            serde_json::to_string(data).unwrap_or_default()
+        );
+
+        self.send_status("busy", parent).await?;
+
+        // Check if it's a JSON-RPC request
+        if let Some(method) = data["method"].as_str() {
+            let rpc_id = &data["id"];
+
+            tracing::info!(
+                "JSON-RPC request: method={}, id={}",
+                method,
+                rpc_id
+            );
+
+            // Handle positron.variables requests
+            if Some(comm_id.to_string()) == self.variables_comm_id {
+                match method {
+                    "list" => {
+                        tracing::info!("Handling variables.list request");
+                        self.send_shell_reply(
+                            "comm_msg",
+                            json!({
+                                "comm_id": comm_id,
+                                "data": {
+                                    "jsonrpc": "2.0",
+                                    "id": rpc_id,
+                                    "result": {
+                                        "variables": [],
+                                        "length": 0,
+                                        "version": 0
+                                    }
+                                }
+                            }),
+                            parent,
+                            identities,
+                        )
+                        .await?;
+                    }
+                    "clear" => {
+                        tracing::info!("Handling variables.clear request (stub)");
+                        self.send_shell_reply(
+                            "comm_msg",
+                            json!({
+                                "comm_id": comm_id,
+                                "data": {
+                                    "jsonrpc": "2.0",
+                                    "id": rpc_id,
+                                    "result": {}
+                                }
+                            }),
+                            parent,
+                            identities,
+                        )
+                        .await?;
+                    }
+                    "delete" => {
+                        tracing::info!("Handling variables.delete request (stub)");
+                        self.send_shell_reply(
+                            "comm_msg",
+                            json!({
+                                "comm_id": comm_id,
+                                "data": {
+                                    "jsonrpc": "2.0",
+                                    "id": rpc_id,
+                                    "result": []
+                                }
+                            }),
+                            parent,
+                            identities,
+                        )
+                        .await?;
+                    }
+                    "inspect" => {
+                        tracing::info!("Handling variables.inspect request (stub)");
+                        self.send_shell_reply(
+                            "comm_msg",
+                            json!({
+                                "comm_id": comm_id,
+                                "data": {
+                                    "jsonrpc": "2.0",
+                                    "id": rpc_id,
+                                    "result": {
+                                        "children": [],
+                                        "length": 0
+                                    }
+                                }
+                            }),
+                            parent,
+                            identities,
+                        )
+                        .await?;
+                    }
+                    _ => {
+                        tracing::warn!("Unhandled variables method: {}", method);
+                    }
+                }
+            }
+            // Handle positron.ui requests
+            else if Some(comm_id.to_string()) == self.ui_comm_id {
+                tracing::info!("Received UI request: {} (ignoring)", method);
+            }
+            // Handle positron.plot requests
+            else if Some(comm_id.to_string()) == self.plot_comm_id {
+                tracing::info!("Received plot request: {} (ignoring)", method);
+            }
+            // Unknown comm
+            else {
+                tracing::warn!("Message for unknown comm_id: {}", comm_id);
+            }
+        }
+
+        self.send_status("idle", parent).await?;
+        Ok(())
+    }
+
+    /// Handle comm_info_request - list active comms
+    async fn handle_comm_info(
+        &mut self,
+        parent: &JupyterMessage,
+        identities: &[Vec<u8>],
+    ) -> Result<()> {
+        let target_name = parent.content["target_name"].as_str();
+
+        tracing::info!(
+            "COMM_INFO_REQUEST: target_name={:?}",
+            target_name
+        );
+
+        self.send_status("busy", parent).await?;
+
+        let mut comms = json!({});
+
+        // Add active comms to response
+        if let Some(id) = &self.variables_comm_id {
+            if target_name.is_none() || target_name == Some("positron.variables") {
+                comms[id] = json!({"target_name": "positron.variables"});
+            }
+        }
+        if let Some(id) = &self.ui_comm_id {
+            if target_name.is_none() || target_name == Some("positron.ui") {
+                comms[id] = json!({"target_name": "positron.ui"});
+            }
+        }
+        if let Some(id) = &self.plot_comm_id {
+            if target_name.is_none() || target_name == Some("positron.plot") {
+                comms[id] = json!({"target_name": "positron.plot"});
+            }
+        }
+
+        tracing::info!("Returning comms: {}", serde_json::to_string(&comms).unwrap_or_default());
+
+        self.send_shell_reply(
+            "comm_info_reply",
+            json!({
+                "status": "ok",
+                "comms": comms
+            }),
+            parent,
+            identities,
+        )
+        .await?;
+
+        self.send_status("idle", parent).await?;
+        Ok(())
+    }
+
+    /// Handle comm_close - a client is closing a comm channel
+    async fn handle_comm_close(
+        &mut self,
+        parent: &JupyterMessage,
+        _identities: &[Vec<u8>],
+    ) -> Result<()> {
+        let comm_id = parent.content["comm_id"].as_str().unwrap_or("");
+
+        tracing::info!("COMM_CLOSE: comm_id={}", comm_id);
+
+        self.send_status("busy", parent).await?;
+
+        // Clear comm ID if it matches
+        if Some(comm_id.to_string()) == self.variables_comm_id {
+            tracing::info!("Closing positron.variables comm");
+            self.variables_comm_id = None;
+        } else if Some(comm_id.to_string()) == self.ui_comm_id {
+            tracing::info!("Closing positron.ui comm");
+            self.ui_comm_id = None;
+        } else if Some(comm_id.to_string()) == self.plot_comm_id {
+            tracing::info!("Closing positron.plot comm");
+            self.plot_comm_id = None;
+        } else {
+            tracing::warn!("Close for unknown comm_id: {}", comm_id);
+        }
+
         self.send_status("idle", parent).await?;
         Ok(())
     }
