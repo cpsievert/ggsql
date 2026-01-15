@@ -263,6 +263,7 @@ impl KernelServer {
                 "version": env!("CARGO_PKG_VERSION"),
                 "mimetype": "text/x-ggsql",
                 "file_extension": ".ggsql",
+                // TODO: We will want our own highlighting syntax here, and for Quarto.
                 "pygments_lexer": "sql",
                 "codemirror_mode": "sql",
                 "positron": {
