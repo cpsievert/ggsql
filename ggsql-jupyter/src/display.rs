@@ -55,17 +55,26 @@ fn format_vegalite(spec: String) -> Value {
       // Use require.js to load Vega libraries
       window.requirejs.config({{
         paths: {{
+          'dom-ready': 'https://cdn.jsdelivr.net/npm/domready@1/ready.min',
           'vega': 'https://cdn.jsdelivr.net/npm/vega@5/build/vega.min',
           'vega-lite': 'https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min',
           'vega-embed': 'https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min'
         }}
       }});
 
-      setTimeout(() => {{
-        window.requirejs(['vega-embed'], function(vegaEmbed) {{
-          vegaEmbed('#' + visId, spec, {{"actions": true}}).catch(console.error);
+      function docReady(fn) {{
+        if (document.readyState === 'complete') fn();
+        else window.addEventListener("load", () => {{
+          fn();
         }});
-      }}, 100);
+      }}
+      docReady(function() {{
+        window.requirejs(["dom-ready", "vega", "vega-embed"], function(domReady, vega, vegaEmbed) {{
+            domReady(function () {{
+              vegaEmbed('#' + visId, spec, {{"actions": true}}).catch(console.error);
+            }});
+        }});
+      }});
     }} else {{
       // Fallback for non-Jupyter environments
       function loadScript(src) {{
