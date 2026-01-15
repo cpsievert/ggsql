@@ -114,8 +114,10 @@ function generateMetadata(
  *
  * Uses the startKernel callback to manually start the kernel process,
  * giving us more control over the launch process.
+ *
+ * @param workspacePath - Optional workspace path to use as the kernel's working directory
  */
-function createKernelSpec(): JupyterKernelSpec {
+function createKernelSpec(workspacePath?: string): JupyterKernelSpec {
     const kernelPath = getKernelPath();
 
     return {
@@ -128,13 +130,15 @@ function createKernelSpec(): JupyterKernelSpec {
         kernel_protocol_version: '5.3',
         startKernel: async (session: JupyterSession, kernel: JupyterKernel) => {
             kernel.log(`Starting ggsql kernel with connection file: ${session.state.connectionFile}`);
+            kernel.log(`Working directory: ${workspacePath ?? 'inherited from parent'}`);
 
             const connectionFile = session.state.connectionFile;
 
             // Start the kernel process
             const proc = cp.spawn(kernelPath, ['-f', connectionFile], {
                 stdio: ['ignore', 'pipe', 'pipe'],
-                detached: false
+                detached: false,
+                cwd: workspacePath
             });
 
             // Log stdout and stderr
@@ -244,8 +248,12 @@ export class GgsqlRuntimeManager implements positron.LanguageRuntimeManager {
         // Ensure the extension is activated
         const supervisorApi = await supervisorExt.activate();
 
+        // Get workspace path for kernel's working directory
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const workspacePath = workspaceFolders?.[0]?.uri.fsPath;
+
         // Create the kernel spec
-        const kernelSpec = createKernelSpec();
+        const kernelSpec = createKernelSpec(workspacePath);
 
         // Create the dynamic state
         const dynState: positron.LanguageRuntimeDynState = {
