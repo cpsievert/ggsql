@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>ggsql - SQL Visualization Grammar – ggsql</title>
+<title>Create layers with DRAW – ggsql</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,29 +58,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<link href="./assets/icon.png" rel="icon" type="image/png">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-8caf6eaa0938078aad3b4e3e78d03e50.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-391dc9eaa9d5ee7385b50e8209b8eefe.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-8caf6eaa0938078aad3b4e3e78d03e50.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-aacdff9911f31d2e9adf9f5eb7276c19.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-78e00d96e8eaacf9eca6a28872d1d014.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-aacdff9911f31d2e9adf9f5eb7276c19.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../assets/icon.png" rel="icon" type="image/png">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-8caf6eaa0938078aad3b4e3e78d03e50.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark-391dc9eaa9d5ee7385b50e8209b8eefe.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-8caf6eaa0938078aad3b4e3e78d03e50.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aacdff9911f31d2e9adf9f5eb7276c19.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-dark-78e00d96e8eaacf9eca6a28872d1d014.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-aacdff9911f31d2e9adf9f5eb7276c19.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -110,7 +110,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed quarto-light">
@@ -120,11 +120,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./assets/icon.png" alt="" class="navbar-logo light-content">
-    <img src="./assets/icon.png" alt="" class="navbar-logo dark-content">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../../assets/icon.png" alt="" class="navbar-logo light-content">
+    <img src="../../assets/icon.png" alt="" class="navbar-logo dark-content">
     </a>
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">ggsql</span>
     </a>
   </div>
@@ -135,19 +135,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> 
+    <a class="nav-link" href="../../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./installation.html"> 
+    <a class="nav-link" href="../../installation.html"> 
 <span class="menu-text">Installing ggsql</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./syntax/index.html"> 
+    <a class="nav-link" href="../../syntax/index.html"> 
 <span class="menu-text">Syntax</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./examples.html"> 
+    <a class="nav-link" href="../../examples.html"> 
 <span class="menu-text">Examples</span></a>
   </li>  
 </ul>
@@ -166,24 +166,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#example" id="toc-example" class="nav-link active" data-scroll-target="#example">Example</a></li>
-  <li><a href="#project-status" id="toc-project-status" class="nav-link" data-scroll-target="#project-status">Project Status</a></li>
-  <li><a href="#architecture" id="toc-architecture" class="nav-link" data-scroll-target="#architecture">Architecture</a></li>
-  <li><a href="#grammar-specification" id="toc-grammar-specification" class="nav-link" data-scroll-target="#grammar-specification">Grammar Specification</a></li>
-  <li><a href="#jupyter-kernel" id="toc-jupyter-kernel" class="nav-link" data-scroll-target="#jupyter-kernel">Jupyter Kernel</a>
+  <li><a href="#clause-syntax" id="toc-clause-syntax" class="nav-link active" data-scroll-target="#clause-syntax">Clause syntax</a>
   <ul class="collapse">
-  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
-  <li><a href="#usage" id="toc-usage" class="nav-link" data-scroll-target="#usage">Usage</a></li>
-  <li><a href="#quarto" id="toc-quarto" class="nav-link" data-scroll-target="#quarto">Quarto</a></li>
-  </ul></li>
-  <li><a href="#vs-code-extension" id="toc-vs-code-extension" class="nav-link" data-scroll-target="#vs-code-extension">VS Code Extension</a>
-  <ul class="collapse">
-  <li><a href="#installation-1" id="toc-installation-1" class="nav-link" data-scroll-target="#installation-1">Installation</a></li>
-  <li><a href="#features" id="toc-features" class="nav-link" data-scroll-target="#features">Features</a></li>
-  </ul></li>
-  <li><a href="#cli" id="toc-cli" class="nav-link" data-scroll-target="#cli">CLI</a>
-  <ul class="collapse">
-  <li><a href="#installation-2" id="toc-installation-2" class="nav-link" data-scroll-target="#installation-2">Installation</a></li>
+  <li><a href="#mapping" id="toc-mapping" class="nav-link" data-scroll-target="#mapping"><code>MAPPING</code></a></li>
+  <li><a href="#remapping" id="toc-remapping" class="nav-link" data-scroll-target="#remapping"><code>REMAPPING</code></a></li>
+  <li><a href="#setting" id="toc-setting" class="nav-link" data-scroll-target="#setting"><code>SETTING</code></a></li>
+  <li><a href="#filter" id="toc-filter" class="nav-link" data-scroll-target="#filter"><code>FILTER</code></a></li>
+  <li><a href="#partition-by" id="toc-partition-by" class="nav-link" data-scroll-target="#partition-by"><code>PARTITION BY</code></a></li>
+  <li><a href="#order-by" id="toc-order-by" class="nav-link" data-scroll-target="#order-by"><code>ORDER BY</code></a></li>
   </ul></li>
   </ul>
 </nav>
@@ -193,7 +183,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">ggsql - SQL Visualization Grammar</h1>
+<h1 class="title">Create layers with <code>DRAW</code></h1>
 </div>
 
 
@@ -210,136 +200,77 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>A SQL extension for declarative data visualization based on the Grammar of Graphics.</p>
-<p>ggsql allows you to write queries that combine SQL data retrieval with visualization specifications in a single, composable syntax.</p>
-<section id="example" class="level2">
-<h2 class="anchored" data-anchor-id="example">Example</h2>
-<pre class="ggsql"><code>SELECT date, revenue, region
-FROM sales
-WHERE year = 2024
-VISUALISE date AS x, revenue AS y, region AS color
-DRAW line
-LABEL title =&gt; 'Sales by Region'
-THEME minimal</code></pre>
-</section>
-<section id="project-status" class="level2">
-<h2 class="anchored" data-anchor-id="project-status">Project Status</h2>
-<p>✨ <strong>Active Development</strong> - Core functionality is working with ongoing feature additions and refinements.</p>
-<p><strong>Completed:</strong></p>
+<p><code>DRAW</code> is perhaps the most important clause in ggsql as it defines a layer in your visualisation. A layer is a single instance of a visual representation of a dataset. A visualisation can contain multiple layers, either showing the same dataset in different ways or showing different data in each. Layers are drawn in the order they are defined, so that layers defined first will be behind layers defined last.</p>
+<section id="clause-syntax" class="level2">
+<h2 class="anchored" data-anchor-id="clause-syntax">Clause syntax</h2>
+<p>The <code>DRAW</code> clause takes a number of subclauses, all of them optional if the <code>VISUALISE</code> clause provides a global mapping and data source.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>DRAW <span class="op">&lt;</span><span class="kw">layer</span><span class="op">-</span><span class="kw">type</span><span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    MAPPING <span class="op">&lt;</span>mapping<span class="op">&gt;</span>, <span class="op">..</span>. <span class="kw">FROM</span> <span class="op">&lt;</span><span class="kw">data</span><span class="op">-</span><span class="kw">source</span><span class="op">&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    REMAPPING <span class="op">&lt;</span>mapping<span class="op">&gt;</span>, <span class="op">..</span>.</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    SETTING <span class="op">&lt;</span>parameter<span class="op">/</span>aesthetic<span class="op">&gt;</span> <span class="op">=&gt;</span> <span class="op">&lt;</span><span class="fu">value</span><span class="op">&gt;</span>, <span class="op">..</span>.</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FILTER</span> <span class="op">&lt;</span>condition<span class="op">&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="op">&lt;</span><span class="kw">column</span><span class="op">&gt;</span>, <span class="op">..</span>.</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ORDER</span> <span class="kw">BY</span> <span class="op">&lt;</span><span class="kw">column</span><span class="op">&gt;</span>, <span class="op">..</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The only required part is the layer type immediately following the <code>DRAW</code> clause, which specifies the type of layer to draw, e.g.&nbsp;<code>point</code> or <code>histogram</code>. It defines how the remaining settings are interpreted. The <a href="../../syntax/index.html#layers">main syntax page</a> has a list of all available layer types</p>
+<section id="mapping" class="level3">
+<h3 class="anchored" data-anchor-id="mapping"><code>MAPPING</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>MAPPING <span class="op">&lt;</span>mapping<span class="op">&gt;</span>, <span class="op">..</span>. <span class="kw">FROM</span> <span class="op">&lt;</span><span class="kw">data</span><span class="op">-</span><span class="kw">source</span><span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>MAPPINGS</code> clause define how data from the dataset are related to visual aesthetics or statistical properties. Multiple mappings can be provided by separating them with a comma. Mapped aesthetics are always scaled by their respective scale. This means that if you map the value ‘red’ to fill, then fill will not take the color red, but whatever the scale decides should represent the string ‘red’. Layer mappings are merged with the global mapping from the <code>VISUALISE</code> clause with the one in the layer taking precedence. This means that it is not necessary to provide any mappings in the <code>DRAW</code> clause if sufficient global mappings are provided.</p>
+<p><code>MAPPING</code> may have a <code>FROM</code> clause that defines the source of the data. If this is missing the global data source from <code>VISUALISE</code> is used.</p>
+<p>The <code>mapping</code> can take one of three forms and all three can be mixed in the same <code>MAPPING</code> clause:</p>
 <ul>
-<li>✅ Complete tree-sitter grammar with SQL + VISUALISE parsing</li>
-<li>✅ Full AST type system with validation</li>
-<li>✅ DuckDB reader with comprehensive type handling</li>
-<li>✅ Vega-Lite writer with multi-layer support</li>
-<li>✅ CLI tool (<code>ggsql</code>) with parse, exec, and validate commands</li>
-<li>✅ REST API server (<code>ggsql-rest</code>) with CORS support</li>
-<li>✅ Jupyter kernel (<code>ggsql-jupyter</code>) with inline Vega-Lite visualizations</li>
-<li>✅ knitr-engine (<code>ggsql-jupyter</code>) with inline Vega-Lite visualizations</li>
-<li>✅ VS Code extension (<code>ggsql-vscode</code>) with syntax highlighting for <code>.ggsql</code> files</li>
+<li><code>&lt;data&gt; AS &lt;aesthetic/property&gt;</code> (explicit mapping)</li>
+<li><code>&lt;data&gt;</code> (implicit mapping)</li>
+<li><code>*</code> (wildcard mapping)</li>
 </ul>
-<p><strong>Planned:</strong></p>
+<p><code>data</code> can be either:</p>
 <ul>
-<li>📋 Additional readers</li>
-<li>📋 Additional writers</li>
-<li>📋 More geom types and statistical transformations</li>
-<li>📋 Enhanced theme system</li>
+<li><em>Column name</em>: If you provide the name of a column in the layer data (or global data in the absence of layer data) then the values in that column are mapped to the aesthetic or property. If the name of the column is the same as the aesthetic or property you can provide it without the following <code>AS &lt;aesthetic/property&gt;</code> (implicit mapping).</li>
+<li><em>Constant</em>: If you provide a constant like a string, number, or boolean then this value is repeated for every record in the data and mapped to the given aesthetic or property. When mapping a constant you must use the explicit form since the aesthetic/property cannot be derived.</li>
 </ul>
-</section>
-<section id="architecture" class="level2">
-<h2 class="anchored" data-anchor-id="architecture">Architecture</h2>
-<p>ggsql splits queries at the <code>VISUALISE</code> boundary:</p>
+<p>If an asterisk is given (wildcard mapping) it indicate that every column in the layer data with a name matching a supported aesthetic or property are implicitly mapped to said aesthetic or property. If the aesthetic or property has been mapped elsewhere then that gains precedence (i.e.&nbsp;if writing <code>MAPPING *, revenue AS y</code> then y will take on the data in the revenue column even if a y column exist in the data)</p>
+<p>An <code>aesthetic</code> is a visual characteristic of what you are rendering. Different aesthetics are available depending on the layer type since e.g.&nbsp;linetype is not relevant for points and shape are not relevant for lines.</p>
+<p>A <code>property</code> is a value used by the statistical transformation done by the layer, e.g.&nbsp;the weight property in the histogram layer that allows weighted histogram calculation.</p>
+<blockquote class="blockquote">
+<p>Mapped aesthetics are always scaled by their respective scale, whereas properties are not (there are no scales for properties).</p>
+</blockquote>
+<p>The documentation for each layer type provides an overview of the aesthetics and properties available for them.</p>
+<p>A layer may use a data source different than the global data by appending a <code>FROM &lt;data-source&gt;</code> to the mapping. The data source can be either:</p>
 <ul>
-<li><strong>SQL portion</strong> → passed to pluggable readers (DuckDB, PostgreSQL, CSV, etc.)</li>
-<li><strong>VISUALISE portion</strong> → parsed and compiled into visualization specifications</li>
-<li><strong>Output</strong> → rendered via pluggable writers (ggplot2, PNG, Vega-Lite, etc.)</li>
+<li><em>Table/CTE</em>: If providing an unquoted identifier it is assumed that the data is available in the backend, either as a CTE defined in the pre-query, or as a proper table in the database.</li>
+<li><em>Filepath</em>: If a string is provided (single quoted), it is assumed to point to a file that can be read directly by the backend.</li>
 </ul>
 </section>
-<section id="grammar-specification" class="level2">
-<h2 class="anchored" data-anchor-id="grammar-specification">Grammar Specification</h2>
-<p>See <a href="CLAUDE.md">CLAUDE.md</a> for the in-progress ggsql grammar specification, including:</p>
+<section id="remapping" class="level3">
+<h3 class="anchored" data-anchor-id="remapping"><code>REMAPPING</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>REMAPPING <span class="op">&lt;</span>mapping<span class="op">&gt;</span>, <span class="op">..</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Some layer types like histogram runs the data through a statistical transformation in order to arrive at the data that needs to be displayed (e.g.&nbsp;count per bin). During this, one or more columns are added to the data and you can access these in the <code>REMAPPING</code> clause. Layers that perform statistical transformations always have a default remapping (e.g.&nbsp;<code>count AS y</code> in histogram) so it never required to specify a remapping, but you can do so, either to change the default (e.g.&nbsp;<code>density AS y</code>to access the calculated density instead of count), or to use the calculated property for another aesthetic (e.g.&nbsp;<code>count AS fill</code> to also shade the bars according to their height).</p>
+<p>Remappings have to be explicit since the property name never coincide with an aesthetic. Further, remappings must always map to a visual aesthetic since the statistical properties have already been consumed.</p>
+</section>
+<section id="setting" class="level3">
+<h3 class="anchored" data-anchor-id="setting"><code>SETTING</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>SETTING <span class="op">&lt;</span>parameter<span class="op">/</span>aesthetic<span class="op">&gt;</span> <span class="op">=&gt;</span> <span class="op">&lt;</span><span class="fu">value</span><span class="op">&gt;</span>, <span class="op">..</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>SETTING</code> clause can be used for to different things:</p>
 <ul>
-<li>Syntax reference</li>
-<li>AST structure</li>
-<li>Implementation phases and architecture</li>
-<li>Design principles and philosophy</li>
-</ul>
-<p>Key grammar elements:</p>
-<ul>
-<li><code>VISUALISE [mappings] [FROM source]</code> - Entry point with global aesthetic mappings</li>
-<li><code>DRAW &lt;geom&gt; [MAPPING] [SETTING] [FILTER]</code> - Define geometric layers (point, line, bar, etc.)</li>
-<li><code>SCALE &lt;aesthetic&gt; SETTING</code> - Configure data-to-visual mappings</li>
-<li><code>FACET</code> - Create small multiples (WRAP for flowing layout, BY for grid)</li>
-<li><code>COORD</code> - Coordinate transformations (cartesian, flip, polar)</li>
-<li><code>LABEL</code>, <code>THEME</code>, <code>GUIDE</code> - Styling and annotation</li>
+<li><em>Setting parameters</em>: Some layers take additional arguments that control how they behave. Often, but not always, these modify the statistical transformation in some way. An example would be the binwidth parameter in histogram which controls the width of each bin during histogram calculation. This is not a statistical property since it is not related to each record, but to the calculation as a whole.</li>
+<li><em>Setting aesthetics</em>: If you wish to set a specific aesthetic to a literal value, e.g.&nbsp;‘red’ (as in the color red) then you can do so in the <code>SETTING</code> clause. Aesthetics that are set will not go through a scale but will use the provided value as-is. You cannot set an aesthetic to a column, only to a scalar literal value.</li>
 </ul>
 </section>
-<section id="jupyter-kernel" class="level2">
-<h2 class="anchored" data-anchor-id="jupyter-kernel">Jupyter Kernel</h2>
-<p>The <code>ggsql-jupyter</code> package provides a Jupyter kernel for interactive ggsql queries with inline Vega-Lite visualizations.</p>
-<section id="installation" class="level3">
-<h3 class="anchored" data-anchor-id="installation">Installation</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> build <span class="at">--release</span> <span class="at">--package</span> ggsql-jupyter</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./target/release/ggsql-jupyter</span> <span class="at">--install</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="filter" class="level3">
+<h3 class="anchored" data-anchor-id="filter"><code>FILTER</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">FILTER</span> <span class="op">&lt;</span>condition<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>You may not want to use all data provided from the data source in the layer. You can limit the data to plot with the <code>FILTER</code> clause. The content of <code>condition</code> is used directly in a <code>WHERE</code> clause when querying the backend for the layer data, so whatever type of expression you database backend supports there will work.</p>
 </section>
-<section id="usage" class="level3">
-<h3 class="anchored" data-anchor-id="usage">Usage</h3>
-<p>After installation, create a new notebook with the “ggsql” kernel or use <code>%kernel ggsql</code> in an existing notebook.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Create data</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> sales <span class="kw">AS</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> (<span class="kw">VALUES</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'2024-01-01'</span>:<span class="ch">:DATE</span>, <span class="dv">100</span>, <span class="st">'North'</span>),</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'2024-01-02'</span>:<span class="ch">:DATE</span>, <span class="dv">120</span>, <span class="st">'South'</span>)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>) <span class="kw">AS</span> t(<span class="dt">date</span>, revenue, region)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">-- Visualize with ggsql using global mapping</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> sales</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>VISUALISE <span class="dt">date</span> <span class="kw">AS</span> x, revenue <span class="kw">AS</span> y, region <span class="kw">AS</span> color</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>DRAW line</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>SCALE x SETTING <span class="kw">type</span> <span class="op">=&gt;</span> <span class="st">'date'</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">LABEL</span> title <span class="op">=&gt;</span> <span class="st">'Sales Trends'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The kernel maintains a persistent DuckDB session across cells, so you can create tables in one cell and query them in another.</p>
+<section id="partition-by" class="level3">
+<h3 class="anchored" data-anchor-id="partition-by"><code>PARTITION BY</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="op">&lt;</span><span class="kw">column</span><span class="op">&gt;</span>, <span class="op">..</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>During drawing the records in the layer data are grouped by all the discrete data that has been mapped. This grouping is not relevant to all layer types but critical for some, e.g.&nbsp;line layers where the grouping defines which records are connected with a line.</p>
+<p>Often the implicit grouping from the aesthetic mapping is enough, e.g.&nbsp;mapping a discrete value to colour will create one line per colour, but sometimes you need a grouping not reflected in the aesthetic mapping. In that case you can use the <code>PARTITION BY</code> clause to define data columns used for grouping in addition to the ones from the mapping.</p>
 </section>
-<section id="quarto" class="level3">
-<h3 class="anchored" data-anchor-id="quarto">Quarto</h3>
-<p>A Quarto example can be found in <code>ggsql-jupyter/tests/quarto/doc.qmd</code>.</p>
-</section>
-</section>
-<section id="vs-code-extension" class="level2">
-<h2 class="anchored" data-anchor-id="vs-code-extension">VS Code Extension</h2>
-<p>The <code>ggsql-vscode</code> extension provides syntax highlighting for ggsql files in Visual Studio Code.</p>
-<section id="installation-1" class="level3">
-<h3 class="anchored" data-anchor-id="installation-1">Installation</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Package the extension</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ggsql-vscode</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install <span class="at">-g</span> @vscode/vsce</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">vsce</span> package</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Install the VSIX file</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ex">code</span> <span class="at">--install-extension</span> ggsql-0.1.0.vsix</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="features" class="level3">
-<h3 class="anchored" data-anchor-id="features">Features</h3>
-<ul>
-<li><strong>Syntax highlighting</strong> for ggsql keywords, geoms, aesthetics, and SQL</li>
-<li><strong>File association</strong> for <code>.ggsql</code>, <code>.ggsql.sql</code>, and <code>.gsql</code> extensions</li>
-<li><strong>Bracket matching</strong> and auto-closing for parentheses and brackets</li>
-<li><strong>Comment support</strong> for <code>--</code> single-line and <code>/* */</code> multi-line comments</li>
-</ul>
-<p>The extension uses a TextMate grammar that highlights:</p>
-<ul>
-<li>SQL keywords (SELECT, FROM, WHERE, JOIN, etc.)</li>
-<li>ggsql clauses (VISUALISE, DRAW, SCALE, COORD, FACET, etc.)</li>
-<li>Geometric objects (point, line, bar, area, etc.)</li>
-<li>Aesthetics (x, y, color, size, shape, etc.)</li>
-<li>Scale types (linear, log10, date, viridis, etc.)</li>
-</ul>
-</section>
-</section>
-<section id="cli" class="level2">
-<h2 class="anchored" data-anchor-id="cli">CLI</h2>
-<section id="installation-2" class="level3">
-<h3 class="anchored" data-anchor-id="installation-2">Installation</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> install <span class="at">--path</span> src</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="order-by" class="level3">
+<h3 class="anchored" data-anchor-id="order-by"><code>ORDER BY</code></h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">ORDER</span> <span class="kw">BY</span> <span class="op">&lt;</span><span class="kw">column</span><span class="op">&gt;</span>, <span class="op">..</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For some layers the order of records in the data is important, e.g.&nbsp;the path layer which connect records in the order they are provided. Since databases often doesn’t guarantee a specific order of the data, the <code>ORDER BY</code> clause can be used to enforce such and order. Even for layers where the order doesn’t immediately seem to matter it may have an effect, e.g.&nbsp;an overplottet scatterplot where the records in the end of the data are plottet on top of the one in the start.</p>
 
 
 </section>

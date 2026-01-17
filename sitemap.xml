@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://georgestagg.github.io/ggsql/examples.html</loc>
-    <lastmod>2026-01-15T11:25:02.483Z</lastmod>
+    <loc>https://georgestagg.github.io/ggsql/installation.html</loc>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
+  </url>
+  <url>
+    <loc>https://georgestagg.github.io/ggsql/syntax/clause/draw.html</loc>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
+  </url>
+  <url>
+    <loc>https://georgestagg.github.io/ggsql/syntax/index.html</loc>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
   </url>
   <url>
     <loc>https://georgestagg.github.io/ggsql/index.html</loc>
-    <lastmod>2026-01-15T11:25:02.483Z</lastmod>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
+  </url>
+  <url>
+    <loc>https://georgestagg.github.io/ggsql/syntax/layer/point.html</loc>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
+  </url>
+  <url>
+    <loc>https://georgestagg.github.io/ggsql/examples.html</loc>
+    <lastmod>2026-01-17T17:48:59.874Z</lastmod>
   </url>
 </urlset>
