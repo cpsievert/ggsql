@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Initialise a visualisation with VISUALISE – ggsql</title>
+<title>Create small multiples with FACET – ggsql</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,41 +19,6 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -193,7 +158,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html">Main clauses</a></li><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html"><code>VISUALISE</code></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html">Main clauses</a></li><li class="breadcrumb-item"><a href="../../syntax/clause/facet.html"><code>FACET</code></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -236,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../syntax/clause/visualise.html" class="sidebar-item-text sidebar-link active">
+  <a href="../../syntax/clause/visualise.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><code>VISUALISE</code></span></a>
   </div>
 </li>
@@ -254,7 +219,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../../syntax/clause/facet.html" class="sidebar-item-text sidebar-link">
+  <a href="../../syntax/clause/facet.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><code>FACET</code></span></a>
   </div>
 </li>
@@ -294,21 +259,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#clause-syntax" id="toc-clause-syntax" class="nav-link active" data-scroll-target="#clause-syntax">Clause syntax</a></li>
-  </ul>
-</nav>
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+        
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html">Main clauses</a></li><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html"><code>VISUALISE</code></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../syntax/clause/visualise.html">Main clauses</a></li><li class="breadcrumb-item"><a href="../../syntax/clause/facet.html"><code>FACET</code></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Initialise a visualisation with <code>VISUALISE</code></h1>
+<h1 class="title">Create small multiples with <code>FACET</code></h1>
 </div>
 
 
@@ -325,39 +284,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>The <code>VISUALISE</code> (or <code>VISUALIZE</code>) clause marks the beginning of a ggsql visualisation declaration. As such it demarcates where the regular query ends and the visualisation query starts. Everything that comes before the <code>VISUALISE</code> clause is considered a standard SQL query that is sent to the backend. Any CTEs defined therein will be available to the ggsql query, and if it ends with a <code>SELECT</code> query this will automatically be added as the global data for the plot.</p>
-<section id="clause-syntax" class="level2">
-<h2 class="anchored" data-anchor-id="clause-syntax">Clause syntax</h2>
-<p>The <code>VISUALISE</code> clause is quite simple and doesn’t take any additional required parameters. You can, however, use it to define global mappings and a global data source (if the earlier query didn’t end in a <code>SELECT</code>).</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>VISUALISE <span class="op">&lt;</span>mapping<span class="op">&gt;</span>, <span class="op">..</span>. <span class="kw">FROM</span> <span class="op">&lt;</span><span class="kw">data</span><span class="op">-</span><span class="kw">source</span><span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Following <code>VISUALISE</code> you can provide a series of global mappings. These will be inherited by the layers created with the <code>DRAW</code> clause but can be overwritten by them. Mappings define how data from the dataset are related to visual aesthetics or statistical properties. Multiple mappings can be provided by separating them with a comma. Mapped aesthetics are always scaled by their respective scale. This means that if you map the value ‘red’ to fill, then fill will not take the color red, but whatever the scale decides should represent the string ‘red’.</p>
-<p><code>VISUALISE</code> may have a <code>FROM</code> clause that defines the source of the global data. If present it overwrites the terminal <code>SELECT</code> clause in the previous query as the global data. Global data is used by layers that do not specify their own data source with <code>MAPPING ... FROM &lt;data-source&gt;</code>.</p>
-<p>The <code>mapping</code> can take one of three forms and all three can be mixed:</p>
-<ul>
-<li><code>&lt;data&gt; AS &lt;aesthetic/property&gt;</code> (explicit mapping)</li>
-<li><code>&lt;data&gt;</code> (implicit mapping)</li>
-<li><code>*</code> (wildcard mapping)</li>
-</ul>
-<p><code>data</code> can be either:</p>
-<ul>
-<li><em>Column name</em>: If you provide the name of a column in the data then the values in that column are mapped to the aesthetic or property. If the name of the column is the same as the aesthetic or property you can provide it without the following <code>AS &lt;aesthetic/property&gt;</code> (implicit mapping).</li>
-<li><em>Constant</em>: If you provide a constant like a string, number, or boolean then this value is repeated for every record in the data and mapped to the given aesthetic or property. When mapping a constant you must use the explicit form since the aesthetic/property cannot be derived.</li>
-</ul>
-<p>If an asterisk is given (wildcard mapping) it indicate that every column in the layer data with a name matching a supported aesthetic or property are implicitly mapped to said aesthetic or property. If the aesthetic or property has been mapped elsewhere then that gains precedence (i.e.&nbsp;if writing <code>VISUALISE *, revenue AS y</code> then y will take on the data in the revenue column even if a y column exist in the data)</p>
-<p>An <code>aesthetic</code> is a visual characteristic of what you are rendering. Different aesthetics are available depending on the layer type since e.g.&nbsp;linetype is not relevant for points and shape are not relevant for lines.</p>
-<p>A <code>property</code> is a value used by the statistical transformation done by the layer, e.g.&nbsp;the weight property in the histogram layer that allows weighted histogram calculation.</p>
-<blockquote class="blockquote">
-<p>Mapped aesthetics are always scaled by their respective scale, whereas properties are not (there are no scales for properties).</p>
-</blockquote>
-<p>Layers only inherit the aesthetics and properties they support from the global mapping. The documentation for each layer type provides an overview of the aesthetics and properties available for them.</p>
-<p>When specifying a global data source with <code>FROM &lt;data-source&gt;</code> the <code>data-source</code> can take one of two different forms:</p>
-<ul>
-<li><em>Table/CTE</em>: If providing an unquoted identifier it is assumed that the data is available in the backend, either as a CTE defined in the pre-query, or as a proper table in the database.</li>
-<li><em>Filepath</em>: If a string is provided (single quoted), it is assumed to point to a file that can be read directly by the backend.</li>
-</ul>
 
 
-</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
