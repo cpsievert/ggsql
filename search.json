@@ -7,63 +7,118 @@
     "text": "ggsql is very much still a work in progress and the installation process reflects this. Eventually we will have proper installers but for now please follow this process if you wish to play around with it:\n\nClone the repository:\ngit clone https://github.com/georgestagg/ggsql\ncd ggsql\nInstall tree-sitter CLI:\nnpm install -g tree-sitter-cli\nBuild the project:\ncd tree-sitter-ggsql && tree-sitter generate && cd ..\ncargo build\nInstall the Jupyter kernel:\ncargo run --package ggsql-jupyter -- --install"
   },
   {
-    "objectID": "syntax/layer/point.html",
-    "href": "syntax/layer/point.html",
-    "title": "Point layer",
+    "objectID": "syntax/layer/line.html",
+    "href": "syntax/layer/line.html",
+    "title": "Line layer",
     "section": "",
-    "text": "Layers are declared with the DRAW clause. Read the documentation for this clause for a thorough description of how to use it.\nThe point geom is used to create scatterplots. The scatterplot is most useful for displaying the relationship between two continuous variables. A bubblechart is a scatterplot with a third variable mapped to the size of points.",
+    "text": "Layers are declared with the DRAW clause. Read the documentation for this clause for a thorough description of how to use it.\nThe line layer is used to create lineplots. Lineplots always connects records along the x-axis, in contrast to path layers which use the order of data to connect records. Lines are divided due to their grouping, which is the combination of the discrete mapped aesthetics and the columns specified in the layers PARTITION BY.",
     "crumbs": [
       "Home",
       "Layers",
-      "Point layer"
+      "Line layer"
     ]
   },
   {
-    "objectID": "syntax/layer/point.html#aesthetics",
-    "href": "syntax/layer/point.html#aesthetics",
-    "title": "Point layer",
+    "objectID": "syntax/layer/line.html#aesthetics",
+    "href": "syntax/layer/line.html#aesthetics",
+    "title": "Line layer",
     "section": "Aesthetics",
-    "text": "Aesthetics\nThe following aesthetics are recognised by the point layer.\n\nRequired\n\nx: Position along the x-axis\ny: Position along the y-axis\n\n\n\nOptional\n\nsize: The size of each point\ncolour: The default colour of the each point\nstroke: The colour of the stroke around each point (if any). Overrides colour\nfill: The fill colour of each point (if any). Overrides colour\nopacity: The opacity of the point\nshape: The shape used to draw the point",
+    "text": "Aesthetics\nThe following aesthetics are recognised by the point layer.\n\nRequired\n\nx: Position along the x-axis\ny: Position along the y-axis\n\n\n\nOptional\n\nsize: The size of each point\ncolour: The default colour of the each point\nstroke: The colour of the stroke around each point (if any). Overrides colour\nopacity: The opacity of the point\nlinewidth: The width of the line\nlinetype: The type of line, i.e. the dashing pattern",
     "crumbs": [
       "Home",
       "Layers",
-      "Point layer"
+      "Line layer"
     ]
   },
   {
-    "objectID": "syntax/layer/point.html#settings",
-    "href": "syntax/layer/point.html#settings",
-    "title": "Point layer",
+    "objectID": "syntax/layer/line.html#settings",
+    "href": "syntax/layer/line.html#settings",
+    "title": "Line layer",
     "section": "Settings",
-    "text": "Settings\nThe point layer has no additional settings",
+    "text": "Settings\nThe line layer has no additional settings",
     "crumbs": [
       "Home",
       "Layers",
-      "Point layer"
+      "Line layer"
     ]
   },
   {
-    "objectID": "syntax/layer/point.html#data-transformation",
-    "href": "syntax/layer/point.html#data-transformation",
-    "title": "Point layer",
+    "objectID": "syntax/layer/line.html#data-transformation",
+    "href": "syntax/layer/line.html#data-transformation",
+    "title": "Line layer",
     "section": "Data transformation",
-    "text": "Data transformation\nThe point layer does not transform its data but passes it through unchanged",
+    "text": "Data transformation\nThe line layer does not transform its data but passes it through unchanged",
     "crumbs": [
       "Home",
       "Layers",
-      "Point layer"
+      "Line layer"
     ]
   },
   {
-    "objectID": "syntax/layer/point.html#examples",
-    "href": "syntax/layer/point.html#examples",
-    "title": "Point layer",
+    "objectID": "syntax/layer/line.html#examples",
+    "href": "syntax/layer/line.html#examples",
+    "title": "Line layer",
     "section": "Examples",
-    "text": "Examples\nCreate a classic scatterplot\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\nMap to size to create a bubble chart\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, body_mass AS size\nUse filter to only plot a subset of the data\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\n    FILTER sex = 'female'",
+    "text": "Examples\nTBD",
     "crumbs": [
       "Home",
       "Layers",
-      "Point layer"
+      "Line layer"
+    ]
+  },
+  {
+    "objectID": "syntax/index.html",
+    "href": "syntax/index.html",
+    "title": "Syntax",
+    "section": "",
+    "text": "ggsql augments the standard SQL syntax with a number of new clauses to describe a visualisation:\n\nVISUALISE initiates the visualisation part of the query\nDRAW adds a new layer to the visualisation\nSCALE specify how an aesthetic should be scaled\nFACET describes how data should be split into small multiples\nPROJECT is used for selecting the coordinate system to use\nLABEL is used to manually add titles to the plot or the various axes and legends",
+    "crumbs": [
+      "Home",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "syntax/index.html#main-clauses",
+    "href": "syntax/index.html#main-clauses",
+    "title": "Syntax",
+    "section": "",
+    "text": "ggsql augments the standard SQL syntax with a number of new clauses to describe a visualisation:\n\nVISUALISE initiates the visualisation part of the query\nDRAW adds a new layer to the visualisation\nSCALE specify how an aesthetic should be scaled\nFACET describes how data should be split into small multiples\nPROJECT is used for selecting the coordinate system to use\nLABEL is used to manually add titles to the plot or the various axes and legends",
+    "crumbs": [
+      "Home",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "syntax/index.html#layers",
+    "href": "syntax/index.html#layers",
+    "title": "Syntax",
+    "section": "Layers",
+    "text": "Layers\nThere are many different layers to choose from when visualising your data. Some are straightforward translations of your data into visual marks such as a point layer, while others perform more or less complicated calculations like e.g. the histogram layer. A layer is selected by providing the layer name after the DRAW clause\n\npoint is used to create a scatterplot layer\nline is used to produce lineplots with the data sorted along the x axis\npath is like line above but does not sort the data but plot it according to its own order\nbar creates a bar chart, optionally calculating y from the number of records in each bar\nhistogram bins the data along the x axis and produces a bar for each bin showing the number of records in it",
+    "crumbs": [
+      "Home",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "syntax/index.html#scales",
+    "href": "syntax/index.html#scales",
+    "title": "Syntax",
+    "section": "Scales",
+    "text": "Scales",
+    "crumbs": [
+      "Home",
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "syntax/index.html#coordinate-systems",
+    "href": "syntax/index.html#coordinate-systems",
+    "title": "Syntax",
+    "section": "Coordinate systems",
+    "text": "Coordinate systems",
+    "crumbs": [
+      "Home",
+      "Overview"
     ]
   },
   {
@@ -123,58 +178,63 @@
     "text": "CLI\n\nInstallation\ncargo install --path src"
   },
   {
-    "objectID": "syntax/index.html",
-    "href": "syntax/index.html",
-    "title": "Syntax",
+    "objectID": "syntax/layer/point.html",
+    "href": "syntax/layer/point.html",
+    "title": "Point layer",
     "section": "",
-    "text": "ggsql augments the standard SQL syntax with a number of new clauses to describe a visualisation:\n\nVISUALISE initiates the visualisation part of the query\nDRAW adds a new layer to the visualisation\nSCALE specify how an aesthetic should be scaled\nFACET describes how data should be split into small multiples\nPROJECT is used for selecting the coordinate system to use\nLABEL is used to manually add titles to the plot or the various axes and legends",
+    "text": "Layers are declared with the DRAW clause. Read the documentation for this clause for a thorough description of how to use it.\nThe point layer is used to create scatterplots. The scatterplot is most useful for displaying the relationship between two continuous variables. A bubblechart is a scatterplot with a third variable mapped to the size of points.",
     "crumbs": [
       "Home",
-      "Overview"
+      "Layers",
+      "Point layer"
     ]
   },
   {
-    "objectID": "syntax/index.html#main-clauses",
-    "href": "syntax/index.html#main-clauses",
-    "title": "Syntax",
-    "section": "",
-    "text": "ggsql augments the standard SQL syntax with a number of new clauses to describe a visualisation:\n\nVISUALISE initiates the visualisation part of the query\nDRAW adds a new layer to the visualisation\nSCALE specify how an aesthetic should be scaled\nFACET describes how data should be split into small multiples\nPROJECT is used for selecting the coordinate system to use\nLABEL is used to manually add titles to the plot or the various axes and legends",
+    "objectID": "syntax/layer/point.html#aesthetics",
+    "href": "syntax/layer/point.html#aesthetics",
+    "title": "Point layer",
+    "section": "Aesthetics",
+    "text": "Aesthetics\nThe following aesthetics are recognised by the point layer.\n\nRequired\n\nx: Position along the x-axis\ny: Position along the y-axis\n\n\n\nOptional\n\nsize: The size of each point\ncolour: The default colour of the each point\nstroke: The colour of the stroke around each point (if any). Overrides colour\nfill: The fill colour of each point (if any). Overrides colour\nopacity: The opacity of the point\nshape: The shape used to draw the point",
     "crumbs": [
       "Home",
-      "Overview"
+      "Layers",
+      "Point layer"
     ]
   },
   {
-    "objectID": "syntax/index.html#layers",
-    "href": "syntax/index.html#layers",
-    "title": "Syntax",
-    "section": "Layers",
-    "text": "Layers\nThere are many different layers to choose from when visualising your data. Some are straightforward translations of your data into visual marks such as a point layer, while others perform more or less complicated calculations like e.g. the histogram layer. A layer is selected by providing the layer name after the DRAW clause\n\npoint is used to create a scatterplot layer\nline is used to produce lineplots with the data sorted along the x axis\npath is like line above but does not sort the data but plot it according to its own order\nbar creates a bar chart, optionally calculating y from the number of records in each bar\nhistogram bins the data along the x axis and produces a bar for each bin showing the number of records in it",
+    "objectID": "syntax/layer/point.html#settings",
+    "href": "syntax/layer/point.html#settings",
+    "title": "Point layer",
+    "section": "Settings",
+    "text": "Settings\nThe point layer has no additional settings",
     "crumbs": [
       "Home",
-      "Overview"
+      "Layers",
+      "Point layer"
     ]
   },
   {
-    "objectID": "syntax/index.html#scales",
-    "href": "syntax/index.html#scales",
-    "title": "Syntax",
-    "section": "Scales",
-    "text": "Scales",
+    "objectID": "syntax/layer/point.html#data-transformation",
+    "href": "syntax/layer/point.html#data-transformation",
+    "title": "Point layer",
+    "section": "Data transformation",
+    "text": "Data transformation\nThe point layer does not transform its data but passes it through unchanged",
     "crumbs": [
       "Home",
-      "Overview"
+      "Layers",
+      "Point layer"
     ]
   },
   {
-    "objectID": "syntax/index.html#coordinate-systems",
-    "href": "syntax/index.html#coordinate-systems",
-    "title": "Syntax",
-    "section": "Coordinate systems",
-    "text": "Coordinate systems",
+    "objectID": "syntax/layer/point.html#examples",
+    "href": "syntax/layer/point.html#examples",
+    "title": "Point layer",
+    "section": "Examples",
+    "text": "Examples\nCreate a classic scatterplot\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\nMap to size to create a bubble chart\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, body_mass AS size\nUse filter to only plot a subset of the data\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\n    FILTER sex = 'female'",
     "crumbs": [
       "Home",
-      "Overview"
+      "Layers",
+      "Point layer"
     ]
   },
   {
