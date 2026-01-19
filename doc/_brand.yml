@@ -38,6 +38,6 @@ typography:
 defaults:
   bootstrap:
     defaults:
-      navbar-bg: "#DEF1EB" # paleteal
-      navbar-fg: "#005F73"
-      navbar-hl: "#001219"
+      navbar-bg: $brand-paleteal
+      navbar-fg: $brand-darkteal
+      navbar-hl: $brand-black
