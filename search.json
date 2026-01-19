@@ -187,62 +187,6 @@
     ]
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "",
-    "text": "A SQL extension for declarative data visualization based on the Grammar of Graphics.\nggsql allows you to write queries that combine SQL data retrieval with visualization specifications in a single, composable syntax."
-  },
-  {
-    "objectID": "index.html#example",
-    "href": "index.html#example",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "Example",
-    "text": "Example\nSELECT date, revenue, region\nFROM sales\nWHERE year = 2024\nVISUALISE date AS x, revenue AS y, region AS color\nDRAW line\nLABEL title =&gt; 'Sales by Region'\nTHEME minimal"
-  },
-  {
-    "objectID": "index.html#project-status",
-    "href": "index.html#project-status",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "Project Status",
-    "text": "Project Status\n✨ Active Development - Core functionality is working with ongoing feature additions and refinements.\nCompleted:\n\n✅ Complete tree-sitter grammar with SQL + VISUALISE parsing\n✅ Full AST type system with validation\n✅ DuckDB reader with comprehensive type handling\n✅ Vega-Lite writer with multi-layer support\n✅ CLI tool (ggsql) with parse, exec, and validate commands\n✅ REST API server (ggsql-rest) with CORS support\n✅ Jupyter kernel (ggsql-jupyter) with inline Vega-Lite visualizations\n✅ knitr-engine (ggsql-jupyter) with inline Vega-Lite visualizations\n✅ VS Code extension (ggsql-vscode) with syntax highlighting for .ggsql files\n\nPlanned:\n\n📋 Additional readers\n📋 Additional writers\n📋 More geom types and statistical transformations\n📋 Enhanced theme system"
-  },
-  {
-    "objectID": "index.html#architecture",
-    "href": "index.html#architecture",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "Architecture",
-    "text": "Architecture\nggsql splits queries at the VISUALISE boundary:\n\nSQL portion → passed to pluggable readers (DuckDB, PostgreSQL, CSV, etc.)\nVISUALISE portion → parsed and compiled into visualization specifications\nOutput → rendered via pluggable writers (ggplot2, PNG, Vega-Lite, etc.)"
-  },
-  {
-    "objectID": "index.html#grammar-specification",
-    "href": "index.html#grammar-specification",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "Grammar Specification",
-    "text": "Grammar Specification\nSee CLAUDE.md for the in-progress ggsql grammar specification, including:\n\nSyntax reference\nAST structure\nImplementation phases and architecture\nDesign principles and philosophy\n\nKey grammar elements:\n\nVISUALISE [mappings] [FROM source] - Entry point with global aesthetic mappings\nDRAW &lt;geom&gt; [MAPPING] [SETTING] [FILTER] - Define geometric layers (point, line, bar, etc.)\nSCALE &lt;aesthetic&gt; SETTING - Configure data-to-visual mappings\nFACET - Create small multiples (WRAP for flowing layout, BY for grid)\nCOORD - Coordinate transformations (cartesian, flip, polar)\nLABEL, THEME, GUIDE - Styling and annotation"
-  },
-  {
-    "objectID": "index.html#jupyter-kernel",
-    "href": "index.html#jupyter-kernel",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "Jupyter Kernel",
-    "text": "Jupyter Kernel\nThe ggsql-jupyter package provides a Jupyter kernel for interactive ggsql queries with inline Vega-Lite visualizations.\n\nInstallation\ncargo build --release --package ggsql-jupyter\n./target/release/ggsql-jupyter --install\n\n\nUsage\nAfter installation, create a new notebook with the “ggsql” kernel or use %kernel ggsql in an existing notebook.\n-- Create data\nCREATE TABLE sales AS\nSELECT * FROM (VALUES\n    ('2024-01-01'::DATE, 100, 'North'),\n    ('2024-01-02'::DATE, 120, 'South')\n) AS t(date, revenue, region)\n\n-- Visualize with ggsql using global mapping\nSELECT * FROM sales\nVISUALISE date AS x, revenue AS y, region AS color\nDRAW line\nSCALE x SETTING type =&gt; 'date'\nLABEL title =&gt; 'Sales Trends'\nThe kernel maintains a persistent DuckDB session across cells, so you can create tables in one cell and query them in another.\n\n\nQuarto\nA Quarto example can be found in ggsql-jupyter/tests/quarto/doc.qmd."
-  },
-  {
-    "objectID": "index.html#vs-code-extension",
-    "href": "index.html#vs-code-extension",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "VS Code Extension",
-    "text": "VS Code Extension\nThe ggsql-vscode extension provides syntax highlighting for ggsql files in Visual Studio Code.\n\nInstallation\n# Package the extension\ncd ggsql-vscode\nnpm install -g @vscode/vsce\nvsce package\n\n# Install the VSIX file\ncode --install-extension ggsql-0.1.0.vsix\n\n\nFeatures\n\nSyntax highlighting for ggsql keywords, geoms, aesthetics, and SQL\nFile association for .ggsql, .ggsql.sql, and .gsql extensions\nBracket matching and auto-closing for parentheses and brackets\nComment support for -- single-line and /* */ multi-line comments\n\nThe extension uses a TextMate grammar that highlights:\n\nSQL keywords (SELECT, FROM, WHERE, JOIN, etc.)\nggsql clauses (VISUALISE, DRAW, SCALE, COORD, FACET, etc.)\nGeometric objects (point, line, bar, area, etc.)\nAesthetics (x, y, color, size, shape, etc.)\nScale types (linear, log10, date, viridis, etc.)"
-  },
-  {
-    "objectID": "index.html#cli",
-    "href": "index.html#cli",
-    "title": "ggsql - SQL Visualization Grammar",
-    "section": "CLI",
-    "text": "CLI\n\nInstallation\ncargo install --path src"
-  },
-  {
     "objectID": "syntax/index.html",
     "href": "syntax/index.html",
     "title": "Syntax",
