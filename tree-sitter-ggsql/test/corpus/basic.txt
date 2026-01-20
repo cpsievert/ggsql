@@ -9,6 +9,7 @@ DRAW point MAPPING x AS x, y AS y
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -40,6 +41,7 @@ DRAW line
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -71,6 +73,7 @@ DRAW point
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -96,6 +99,7 @@ DRAW point
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -115,6 +119,7 @@ DRAW line
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -148,6 +153,7 @@ DRAW point MAPPING 'value' AS color
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -190,6 +196,7 @@ DRAW point SETTING opacity => 0.5, size => 3
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -228,6 +235,7 @@ DRAW point FILTER x > 10
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -260,6 +268,7 @@ DRAW point MAPPING x AS x FILTER a > 10 AND b < 20
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -297,6 +306,7 @@ DRAW point MAPPING x AS x FILTER a = 1 OR b = 2
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -334,6 +344,7 @@ DRAW point MAPPING x AS x, y AS y SETTING opacity => 0.5 FILTER year > 2020
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -379,6 +390,7 @@ DRAW point MAPPING x AS x FILTER region = 'North'
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -410,6 +422,7 @@ DRAW point
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -438,6 +451,7 @@ THEME minimal
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -496,6 +510,7 @@ LABEL title => 'My Plot', x => 'X Axis', y => 'Y Axis'
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -533,6 +548,7 @@ COORD cartesian SETTING xlim => [0, 100]
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -570,6 +586,7 @@ COORD flip
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -618,6 +635,7 @@ DRAW point
                     (identifier
                       (bare_identifier)))))))))))
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -664,6 +682,7 @@ DRAW bar
                 (identifier
                   (bare_identifier)))))))))
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -695,6 +714,7 @@ DRAW point MAPPING "blue" AS color
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -728,6 +748,7 @@ DRAW bar MAPPING category AS x, total AS y
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (from_clause
       (table_ref
         table: (qualified_name
@@ -765,6 +786,7 @@ DRAW point MAPPING date AS x, profit AS y
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -815,6 +837,7 @@ DRAW point MAPPING x AS x, y AS y FROM my_cte
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -849,6 +872,7 @@ DRAW line PARTITION BY category
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -884,6 +908,7 @@ DRAW line PARTITION BY category, region
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -921,6 +946,7 @@ DRAW line SETTING opacity => 0.5 FILTER year > 2020 PARTITION BY category
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -994,6 +1020,7 @@ DRAW point MAPPING x AS x, rn AS y
                 (identifier
                   (bare_identifier)))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1052,6 +1079,7 @@ DRAW point MAPPING x AS x, rnk AS y
                 (identifier
                   (bare_identifier)))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1116,6 +1144,7 @@ DRAW line MAPPING x AS x, total AS y
                 (identifier
                   (bare_identifier)))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1174,6 +1203,7 @@ DRAW point MAPPING x AS x
                       (identifier
                         (bare_identifier))))))))))))
   (visualise_statement
+    (visualise_keyword)
     (from_clause
       (table_ref
         table: (qualified_name
@@ -1233,6 +1263,7 @@ DRAW point MAPPING interval AS x
                 (identifier
                   (bare_identifier)))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1257,6 +1288,7 @@ DRAW line ORDER BY date ASC
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1294,6 +1326,7 @@ DRAW point ORDER BY value DESC
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1331,6 +1364,7 @@ DRAW line ORDER BY category, date DESC
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1372,6 +1406,7 @@ DRAW point ORDER BY date ASC NULLS FIRST
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1411,6 +1446,7 @@ DRAW line ORDER BY value DESC NULLS LAST
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1450,6 +1486,7 @@ DRAW point FILTER x > 0 ORDER BY x ASC
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1494,6 +1531,7 @@ DRAW line PARTITION BY category ORDER BY date ASC
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1535,6 +1573,7 @@ DRAW line SETTING opacity => 0.5 FILTER year > 2020 PARTITION BY region ORDER BY
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1590,6 +1629,7 @@ DRAW bar REMAPPING count AS y
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1623,6 +1663,7 @@ DRAW histogram REMAPPING bin AS x, count AS y
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1654,6 +1695,7 @@ DRAW bar MAPPING category AS x REMAPPING count AS size
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1687,6 +1729,7 @@ DRAW bar MAPPING category AS x REMAPPING count AS y SETTING opacity => 0.8 FILTE
 
 (query
   (visualise_statement
+    (visualise_keyword)
     (global_mapping
       (mapping_list
         (mapping_element
@@ -1760,6 +1803,7 @@ DRAW point MAPPING x AS x
                           (identifier
                             (bare_identifier))))))))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1803,6 +1847,7 @@ DRAW point MAPPING x AS x
               alias: (identifier
                 (bare_identifier))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1851,6 +1896,7 @@ DRAW point MAPPING x AS x
                                     (identifier
                                       (bare_identifier)))))))))))))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1903,6 +1949,7 @@ DRAW point MAPPING x AS x
               alias: (identifier
                 (bare_identifier))))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
@@ -1937,6 +1984,7 @@ DRAW point MAPPING x AS x FROM ggsql:penguins
             (table_ref
               table: (namespaced_identifier)))))))
   (visualise_statement
+    (visualise_keyword)
     (viz_clause
       (draw_clause
         (geom_type)
