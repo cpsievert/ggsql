@@ -202,7 +202,7 @@ Statistical transformations automatically compute aggregations for certain geom 
 
 ### Histogram
 
-When using `DRAW histogram`, ggSQL automatically bins continuous data and counts occurrences. You only need to specify the x aesthetic:
+When using `DRAW histogram`, ggsql automatically bins continuous data and counts occurrences. You only need to specify the x aesthetic:
 
 ```{ggsql}
 SELECT revenue FROM 'sales.csv'
@@ -216,7 +216,7 @@ LABEL
 
 ### Bar with Automatic Count
 
-When using `DRAW bar` without a y aesthetic, ggSQL automatically counts occurrences of each x value:
+When using `DRAW bar` without a y aesthetic, ggsql automatically counts occurrences of each x value:
 
 ```{ggsql}
 SELECT category FROM 'sales.csv'
