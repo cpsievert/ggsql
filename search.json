@@ -119,7 +119,7 @@
     "href": "syntax/layer/bar.html#examples",
     "title": "Bar",
     "section": "Examples",
-    "text": "Examples\nShow the number of each species in the data\nVISUALISE FROM penguins\nDRAW bar\n    MAPPING species AS x\nUse weight to instead show the collective mass of each species\nVISUALISE FROM penguins\nDRAW bar\n    MAPPING species AS x, body_mass AS weight\nMap fill to a discrete value to create a stacked bar chart\nVISUALISE FROM penguins\nDRAW bar\n    MAPPING species AS x, island AS fill\nMap to y if the dataset already contains the value you want to show\nSELECT MAX(body_mass) AS max_mass FROM penguins\nGROUP BY species\nVISUALISE\nDRAW bar\n    MAPPING species AS x, max_mass AS y",
+    "text": "Examples\nShow the number of each species in the data\n\nVISUALISE FROM ggsql:penguins\nDRAW bar\n    MAPPING species AS x\n\n\n\n\n\nUse weight to instead show the collective mass of each species\n\nVISUALISE FROM ggsql:penguins\nDRAW bar\n    MAPPING species AS x, body_mass AS weight\n\n\n\n\n\nMap fill to a discrete value to create a stacked bar chart\n\nVISUALISE FROM ggsql:penguins\nDRAW bar\n    MAPPING species AS x, island AS fill\n\n\n\n\n\nMap to y if the dataset already contains the value you want to show\n\nSELECT species, MAX(body_mass) AS max_mass FROM ggsql:penguins\nGROUP BY species\nVISUALISE\nDRAW bar\n    MAPPING species AS x, max_mass AS y",
     "crumbs": [
       "Home",
       "Layers",
@@ -179,7 +179,7 @@
     "href": "syntax/layer/point.html#examples",
     "title": "Point",
     "section": "Examples",
-    "text": "Examples\nCreate a classic scatterplot\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\nMap to size to create a bubble chart\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, body_mass AS size\nUse filter to only plot a subset of the data\nVISUALISE FROM penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\n    FILTER sex = 'female'",
+    "text": "Examples\nCreate a classic scatterplot\n\nVISUALISE FROM ggsql:penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\n\n\n\n\n\nMap to size to create a bubble chart\n\nVISUALISE FROM ggsql:penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, body_mass AS size\n\n\n\n\n\nUse filter to only plot a subset of the data\n\nVISUALISE FROM ggsql:penguins\nDRAW point\n    MAPPING bill_len AS x, bill_dep AS y, species AS fill\n    SETTING size =&gt; 30\n    FILTER sex = 'female'",
     "crumbs": [
       "Home",
       "Layers",
@@ -354,7 +354,7 @@
     "href": "syntax/layer/histogram.html#examples",
     "title": "Histogram",
     "section": "Examples",
-    "text": "Examples\nShow the number of each species in the data\nVISUALISE FROM penguins\nDRAW histogram\n    MAPPING body_mass AS x\nSplit the histogram in two by mapping sex to fill\nVISUALISE FROM penguins\nDRAW histogram\n    MAPPING body_mass AS x, sex AS fill\nMake the two histograms the same scale by remapping to density\nVISUALISE FROM penguins\nDRAW histogram\n    MAPPING body_mass AS x, sex AS fill\n    REMAPPING density AS y\nSpecify an exact binwidth if needed\nVISUALISE FROM penguins\nDRAW histogram\n    MAPPING body_mass AS x\n    SETTING binwidth =&gt; 100",
+    "text": "Examples\nShow the number of each species in the data\n\nVISUALISE FROM ggsql:penguins\nDRAW histogram\n    MAPPING body_mass AS x\n\n\n\n\n\nSplit the histogram in two by mapping sex to fill\n\nVISUALISE FROM ggsql:penguins\nDRAW histogram\n    MAPPING body_mass AS x, sex AS fill\n\n\n\n\n\nMake the two histograms the same scale by remapping to density\n\nVISUALISE FROM ggsql:penguins\nDRAW histogram\n    MAPPING body_mass AS x, sex AS fill\n    REMAPPING density AS y\n\n\n\n\n\nSpecify an exact binwidth if needed\n\nVISUALISE FROM ggsql:penguins\nDRAW histogram\n    MAPPING body_mass AS x\n    SETTING binwidth =&gt; 100",
     "crumbs": [
       "Home",
       "Layers",
@@ -421,7 +421,7 @@
     "href": "examples.html#basic-visualizations",
     "title": "Examples",
     "section": "Basic Visualizations",
-    "text": "Basic Visualizations\n\nSimple Scatter Plot\n\nSELECT x, y FROM 'data.csv'\nVISUALISE x, y\nDRAW point\n\n\n\n\n\n\n\nLine Chart with Date Scale\n\nSELECT sale_date, revenue FROM 'sales.csv'\nWHERE category = 'Electronics'\nVISUALISE sale_date AS x, revenue AS y\nDRAW line\nSCALE x SETTING type =&gt; 'date'\nLABEL \n    title =&gt; 'Electronics Revenue Over Time', \n    x =&gt; 'Date', \n    y =&gt; 'Revenue ($)'\n\n\n\n\n\n\n\nBar Chart by Category\n\nSELECT category, SUM(revenue) as total\nFROM 'sales.csv'\nGROUP BY category\nVISUALISE category AS x, total AS y, category AS fill\nDRAW bar\nLABEL \n    title =&gt; 'Total Revenue by Category', \n    x =&gt; 'Category', \n    y =&gt; 'Total Revenue ($)'\n\n\n\n\n\n\n\nLine chart with multiple lines with same aesthetics\n\nSELECT * FROM 'sales.csv'\nVISUALISE sale_date AS x, revenue AS y\nDRAW line\n    PARTITION BY category"
+    "text": "Basic Visualizations\n\nSimple Scatter Plot\n\nSELECT x, y FROM 'data.csv'\nVISUALISE x, y\nDRAW point\n\n\n\n\n\n\nVISUALISE bill_len AS x, bill_dep AS y, species AS color FROM ggsql:penguins\nDRAW point\n\n\n\n\n\n\n\nLine Chart with Date Scale\n\nSELECT sale_date, revenue FROM 'sales.csv'\nWHERE category = 'Electronics'\nVISUALISE sale_date AS x, revenue AS y\nDRAW line\nSCALE x SETTING type =&gt; 'date'\nLABEL \n    title =&gt; 'Electronics Revenue Over Time', \n    x =&gt; 'Date', \n    y =&gt; 'Revenue ($)'\n\n\n\n\n\n\nSELECT * FROM ggsql:airquality\nVISUALISE Date AS x\nDRAW line MAPPING Ozone AS y, \"Ozone\" AS color\nDRAW line MAPPING Temp AS y, \"Temp\" AS color\n\n\n\n\n\n\n\nBar Chart by Category\n\nSELECT category, SUM(revenue) as total\nFROM 'sales.csv'\nGROUP BY category\nVISUALISE category AS x, total AS y, category AS fill\nDRAW bar\nLABEL \n    title =&gt; 'Total Revenue by Category', \n    x =&gt; 'Category', \n    y =&gt; 'Total Revenue ($)'\n\n\n\n\n\n\n\nLine chart with multiple lines with same aesthetics\n\nSELECT * FROM 'sales.csv'\nVISUALISE sale_date AS x, revenue AS y\nDRAW line\n    PARTITION BY category"
   },
   {
     "objectID": "examples.html#statistical-transformations",
