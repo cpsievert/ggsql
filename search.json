@@ -59,7 +59,7 @@
     "href": "syntax/layer/line.html#examples",
     "title": "Line",
     "section": "Examples",
-    "text": "Examples\nTBD",
+    "text": "Examples\nStandard lineplot\n\nVISUALISE FROM ggsql:airquality\nDRAW line\n    MAPPING Date AS x, Temp AS y\n\n\n\n\n\nUse PARTITION BY to create multiple lines\n\nVISUALISE FROM ggsql:airquality\nDRAW line\n    MAPPING Day AS x, Temp AS y\n    PARTITION BY Month\n\n\n\n\n\nor split them with an aesthetic\n\nVISUALISE FROM ggsql:airquality\nDRAW line\n    MAPPING Day AS x, Temp AS y, Month AS color",
     "crumbs": [
       "Home",
       "Layers",
