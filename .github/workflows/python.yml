@@ -41,7 +41,7 @@ jobs:
       - name: Install wheel and test
         shell: bash
         run: |
-          pip install --find-links ggsql-python/target/wheels/ ggsql[test]
+          pip install --find-links target/wheels/ ggsql[test]
           pytest ggsql-python/tests/test_ggsql.py -v
 
   e2e-test:
@@ -72,7 +72,7 @@ jobs:
 
       - name: Install wheel and E2E dependencies
         shell: bash
-        run: pip install --find-links ggsql-python/target/wheels/ ggsql[test,e2e]
+        run: pip install --find-links target/wheels/ ggsql[test,e2e]
 
       - name: Run E2E tests
         shell: bash
