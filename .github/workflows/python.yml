@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           pip install ggsql-python/target/wheels/*.whl
-          pip install pytest polars
+          pip install "ggsql[test]"
           pytest ggsql-python/tests/test_ggsql.py -v
 
   e2e-test:
@@ -61,12 +61,11 @@ jobs:
         shell: bash
         run: |
           pip install ggsql-python/target/wheels/*.whl
-          pip install pytest polars altair
+          pip install "ggsql[test,e2e]"
 
       - name: Run E2E tests
         shell: bash
-        run: |
-          pytest ggsql-python/tests/test_altair_e2e.py -v
+        run: pytest ggsql-python/tests/test_altair_e2e.py -v
 
   lint:
     runs-on: ubuntu-latest
