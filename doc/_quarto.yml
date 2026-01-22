@@ -3,8 +3,18 @@ project:
 
 website:
   title: "ggsql"
-  site-url: ggsql.org
-  repo-url: github.com/georgestagg/ggsql
+  description: |
+    The home of ggsql. A declarative visualisation language build on top of SQL
+    and the grammar of graphics.
+  site-url: https://ggsql.org
+  repo-url: https://github.com/ggsql-dev/ggsql
+  issue-url: https://github.com/ggsql-dev/ggsql/issues
+  repo-branch: gh-pages
+  image: assets/logo.png
+  image-alt: |
+    The ggsql logo showing a pencil tracing a lineplot with points. The pencil
+    handle is made up of the classic database silo icon and is coloured in a
+    gradient teal.
   announcement:
     icon: info-circle
     dismissable: true
@@ -13,6 +23,7 @@ website:
     position: below-navbar
   twitter-card: true
   open-graph: true
+  search: true
   navbar:
     left:
       - href: index.qmd
@@ -36,6 +47,13 @@ website:
           - text: "`LABEL`"
             href: syntax/clause/label.qmd
       - examples.qmd
+    tools:
+      - icon: github
+        menu:
+          - text: Source Code
+            href: https://github.com/ggsql-dev/ggsql
+          - text: Report a Bug
+            href: https://github.com/ggsql-dev/ggsql/issues
   sidebar:
     id: syntax
     title: Syntax
@@ -70,6 +88,8 @@ format:
       - brand
       - styles.scss
     toc: true
-
-
-
+    include-in-header:
+      - text: |
+          <script src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js"
+              data-light-bg="#94D2BD"
+              data-dark-bg="#001219"></script>
