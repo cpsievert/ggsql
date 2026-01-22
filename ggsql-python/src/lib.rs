@@ -26,9 +26,9 @@ fn render(ipc_bytes: &Bound<'_, PyBytes>, viz: &str, writer: &str) -> PyResult<S
     // Read DataFrame from IPC bytes
     let bytes = ipc_bytes.as_bytes();
     let cursor = Cursor::new(bytes);
-    let df: DataFrame = IpcReader::new(cursor)
-        .finish()
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Failed to read IPC data: {}", e)))?;
+    let df: DataFrame = IpcReader::new(cursor).finish().map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Failed to read IPC data: {}", e))
+    })?;
 
     // Parse the visualization spec
     // The viz string should be a complete VISUALISE statement
