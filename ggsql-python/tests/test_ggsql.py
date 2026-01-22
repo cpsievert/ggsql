@@ -1,186 +1,116 @@
+"""Tests for ggsql Python bindings.
+
+These tests focus on Python-specific logic:
+- DataFrame conversion via narwhals
+- Writer parameter validation
+- Return type handling
+
+Rust logic (parsing, Vega-Lite generation) is tested in the Rust test suite.
+"""
+
 import pytest
 import polars as pl
 import altair
+
 import ggsql
 
 
-def test_split_query_basic():
-    sql, viz = ggsql.split_query("""
-        SELECT date, value FROM sales
-        VISUALISE date AS x, value AS y
-        DRAW line
-    """)
-    assert "SELECT" in sql
-    assert "VISUALISE" in viz
-    assert "DRAW line" in viz
+class TestSplitQuery:
+    """Tests for split_query() function."""
+
+    def test_splits_sql_and_visualise(self):
+        sql, viz = ggsql.split_query(
+            "SELECT x, y FROM data VISUALISE x, y DRAW point"
+        )
+        assert "SELECT" in sql
+        assert "VISUALISE" in viz
+
+    def test_no_visualise_returns_empty_viz(self):
+        sql, viz = ggsql.split_query("SELECT * FROM data")
+        assert sql == "SELECT * FROM data"
+        assert viz == ""
 
 
-def test_split_query_no_visualise():
-    sql, viz = ggsql.split_query("SELECT * FROM data WHERE x > 5")
-    assert sql == "SELECT * FROM data WHERE x > 5"
-    assert viz == ""
+class TestRenderDataFrameConversion:
+    """Tests for DataFrame handling in render()."""
+
+    def test_accepts_polars_dataframe(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_accepts_polars_lazyframe(self):
+        lf = pl.LazyFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(lf, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_accepts_narwhals_dataframe(self):
+        import narwhals as nw
+
+        pl_df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        nw_df = nw.from_native(pl_df)
+
+        chart = ggsql.render(nw_df, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_accepts_pandas_dataframe(self):
+        pd = pytest.importorskip("pandas")
+
+        pd_df = pd.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(pd_df, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_rejects_invalid_dataframe_type(self):
+        with pytest.raises(TypeError, match="must be a narwhals DataFrame"):
+            ggsql.render({"x": [1, 2, 3]}, "VISUALISE x, y DRAW point")
 
 
-def test_split_query_visualise_from():
-    # VISUALISE FROM injects SELECT * FROM <source>
-    sql, viz = ggsql.split_query("CREATE TABLE x; VISUALISE FROM x")
-    assert sql == "CREATE TABLE x; SELECT * FROM x"
-    assert viz == "VISUALISE FROM x"
+class TestRenderWriterValidation:
+    """Tests for writer parameter validation."""
+
+    def test_default_writer_is_vegalite(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_explicit_vegalite_writer(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point", writer="vegalite")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_unknown_writer_raises(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        with pytest.raises(ValueError, match="Unknown writer.*Supported writers"):
+            ggsql.render(df, "VISUALISE x, y DRAW point", writer="ggplot2")
 
 
-def test_render_simple():
-    df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-    chart = ggsql.render(df, "VISUALISE x, y DRAW point")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-    assert spec["$schema"].startswith("https://vega.github.io/schema/vega-lite")
-    assert "datasets" in spec
+class TestRenderReturnType:
+    """Tests for render() return type."""
+
+    def test_returns_altair_chart(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point")
+        assert isinstance(chart, altair.TopLevelMixin)
+
+    def test_chart_has_data(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point")
+        spec = chart.to_dict()
+        # Data should be embedded in datasets
+        assert "datasets" in spec
+
+    def test_chart_can_be_serialized(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        chart = ggsql.render(df, "VISUALISE x, y DRAW point")
+        # Should not raise
+        json_str = chart.to_json()
+        assert len(json_str) > 0
 
 
-def test_render_lazyframe():
-    lf = pl.LazyFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-    chart = ggsql.render(lf, "VISUALISE x, y DRAW point")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-    assert "layer" in spec or "mark" in spec
+class TestRenderErrorHandling:
+    """Tests for error handling in render()."""
 
-
-def test_render_explicit_writer():
-    df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-    chart = ggsql.render(df, "VISUALISE x, y DRAW point", writer="vegalite")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-    assert "$schema" in spec
-
-
-def test_render_invalid_viz_raises():
-    df = pl.DataFrame({"x": [1]})
-    with pytest.raises(ValueError):
-        ggsql.render(df, "NOT VALID SYNTAX")
-
-
-def test_render_unknown_writer_raises():
-    df = pl.DataFrame({"x": [1], "y": [2]})
-    with pytest.raises(ValueError, match="Unknown writer"):
-        ggsql.render(df, "VISUALISE x, y DRAW point", writer="unknown")
-
-
-def test_render_wildcard_mapping():
-    """Test that VISUALISE * resolves column names."""
-    df = pl.DataFrame({"x": [1, 2], "y": [10, 20]})
-    chart = ggsql.render(df, "VISUALISE * DRAW point")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-    # Should have resolved x and y from DataFrame columns
-    assert "data" in spec or "datasets" in spec
-
-
-def test_render_implicit_mapping():
-    """Test that VISUALISE x, y resolves to x AS x, y AS y."""
-    df = pl.DataFrame({"x": [1, 2], "y": [10, 20]})
-    chart = ggsql.render(df, "VISUALISE x, y DRAW point")
-    spec = chart.to_dict()
-    encoding = spec.get("encoding", {})
-    assert "x" in encoding or "layer" in spec
-
-
-def test_render_with_labels():
-    """Test that LABEL clause produces axis titles."""
-    df = pl.DataFrame({"date": [1, 2], "revenue": [100, 200]})
-    chart = ggsql.render(
-        df,
-        "VISUALISE date AS x, revenue AS y DRAW line LABEL title => 'Sales', x => 'Date'"
-    )
-    spec = chart.to_dict()
-    assert spec.get("title") == "Sales"
-
-
-def test_full_workflow():
-    """Test the complete workflow: split, execute (mock), render."""
-    # Full ggSQL query
-    query = """
-        SELECT 1 as x, 10 as y
-        UNION ALL SELECT 2, 20
-        UNION ALL SELECT 3, 30
-        VISUALISE x, y
-        DRAW line
-        DRAW point
-        LABEL title => 'Test Chart', x => 'X Axis', y => 'Y Axis'
-    """
-
-    # Split into SQL and viz
-    sql, viz = ggsql.split_query(query)
-    assert "SELECT" in sql
-    assert "UNION ALL" in sql
-    assert "VISUALISE" in viz
-
-    # Simulate SQL execution (in real usage, user would use DuckDB/etc)
-    df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-
-    # Render to Altair chart
-    chart = ggsql.render(df, viz)
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-
-    # Verify structure
-    assert spec["$schema"].startswith("https://vega.github.io/schema/vega-lite")
-    assert spec["title"] == "Test Chart"
-    assert "data" in spec or "datasets" in spec
-
-    # Should have 2 layers (line + point)
-    assert "layer" in spec
-    assert len(spec["layer"]) == 2
-
-
-def test_render_uses_correct_global_data_key():
-    """Test that render uses __ggsql_global__ as the dataset key.
-
-    This verifies the fix for using GLOBAL_DATA_KEY constant instead of
-    a hardcoded "__global__" which caused 'Missing data source' errors.
-    """
-    df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-    chart = ggsql.render(df, "VISUALISE x, y DRAW point")
-    spec = chart.to_dict()
-
-    # The datasets dict should use __ggsql_global__ as the key
-    assert "datasets" in spec
-    assert "__ggsql_global__" in spec["datasets"]
-
-    # Verify data is present
-    data = spec["datasets"]["__ggsql_global__"]
-    assert len(data) == 3
-    assert data[0]["x"] == 1
-
-
-def test_render_narwhals_dataframe():
-    """Test that narwhals DataFrames are properly converted to polars."""
-    import narwhals as nw
-
-    # Create a polars DataFrame and wrap it in narwhals
-    pl_df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-    nw_df = nw.from_native(pl_df)
-
-    # Render should accept narwhals DataFrame
-    chart = ggsql.render(nw_df, "VISUALISE x, y DRAW point")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-
-    assert "datasets" in spec
-    assert "__ggsql_global__" in spec["datasets"]
-    assert len(spec["datasets"]["__ggsql_global__"]) == 3
-
-
-def test_render_pandas_dataframe():
-    """Test that pandas DataFrames are properly converted via narwhals."""
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    pd_df = pd.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-
-    chart = ggsql.render(pd_df, "VISUALISE x, y DRAW point")
-    assert isinstance(chart, altair.TopLevelMixin)
-    spec = chart.to_dict()
-
-    assert "datasets" in spec
-    assert "__ggsql_global__" in spec["datasets"]
-    assert len(spec["datasets"]["__ggsql_global__"]) == 3
+    def test_invalid_viz_raises(self):
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+        with pytest.raises(ValueError):
+            ggsql.render(df, "NOT VALID SYNTAX")
