@@ -11,7 +11,8 @@ ggsql-rest --host 127.0.0.1 --port 3000
 
 ## Endpoints
 
-- `POST /api/v1/query` - Execute a ggsql query
+- `POST /api/v1/query` - Execute a ggsql query with VISUALISE (returns Vega-Lite spec)
+- `POST /api/v1/sql` - Execute plain SQL query (returns rows and columns)
 - `POST /api/v1/parse` - Parse a ggsql query (debugging)
 - `GET /api/v1/health` - Health check
 - `GET /api/v1/version` - Version information
@@ -155,6 +156,22 @@ struct ParseResult {
     sql_portion: String,
     viz_portion: String,
     specs: Vec<serde_json::Value>,
+}
+
+/// Request body for /api/v1/sql endpoint
+#[derive(Debug, Deserialize)]
+struct SqlRequest {
+    /// SQL query to execute (no VISUALISE clause)
+    query: String,
+}
+
+/// SQL execution result data
+#[derive(Debug, Serialize)]
+struct SqlResult {
+    /// Array of row objects
+    rows: Vec<serde_json::Value>,
+    /// Column names
+    columns: Vec<String>,
 }
 
 /// Health check response
@@ -554,6 +571,102 @@ async fn parse_handler(
     }))
 }
 
+/// POST /api/v1/sql - Execute plain SQL query (no visualization)
+#[cfg(feature = "duckdb")]
+async fn sql_handler(
+    State(state): State<AppState>,
+    Json(request): Json<SqlRequest>,
+) -> Result<Json<ApiSuccess<SqlResult>>, ApiErrorResponse> {
+    info!("Executing SQL: {} chars", request.query.len());
+
+    // Execute query using shared reader or create new one
+    let df = if let Some(ref reader_mutex) = state.reader {
+        let reader = reader_mutex.lock().map_err(|e| {
+            GgsqlError::InternalError(format!("Failed to lock reader: {}", e))
+        })?;
+        reader.execute(&request.query)?
+    } else {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
+        reader.execute(&request.query)?
+    };
+
+    // Extract column names
+    let columns: Vec<String> = df
+        .get_column_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    // Convert DataFrame to JSON rows
+    let (num_rows, _) = df.shape();
+    let mut rows: Vec<serde_json::Value> = Vec::with_capacity(num_rows);
+
+    for i in 0..num_rows {
+        let mut row_obj = serde_json::Map::new();
+        for col_name in &columns {
+            let column = df.column(col_name).map_err(|e| {
+                GgsqlError::InternalError(format!("Failed to get column {}: {}", col_name, e))
+            })?;
+            let value = column_value_to_json(column, i);
+            row_obj.insert(col_name.clone(), value);
+        }
+        rows.push(serde_json::Value::Object(row_obj));
+    }
+
+    let result = SqlResult { rows, columns };
+
+    Ok(Json(ApiSuccess {
+        status: "success".to_string(),
+        data: result,
+    }))
+}
+
+/// Convert a single value from a Polars Column to JSON
+#[cfg(feature = "duckdb")]
+fn column_value_to_json(column: &polars::prelude::Column, idx: usize) -> serde_json::Value {
+    use polars::prelude::AnyValue;
+
+    // Get the value at the index
+    let any_value = match column.get(idx) {
+        Ok(v) => v,
+        Err(_) => return serde_json::Value::Null,
+    };
+
+    match any_value {
+        AnyValue::Null => serde_json::Value::Null,
+        AnyValue::Boolean(b) => serde_json::Value::Bool(b),
+        AnyValue::Int8(v) => serde_json::Value::Number(v.into()),
+        AnyValue::Int16(v) => serde_json::Value::Number(v.into()),
+        AnyValue::Int32(v) => serde_json::Value::Number(v.into()),
+        AnyValue::Int64(v) => serde_json::Value::Number(v.into()),
+        AnyValue::UInt8(v) => serde_json::Value::Number(v.into()),
+        AnyValue::UInt16(v) => serde_json::Value::Number(v.into()),
+        AnyValue::UInt32(v) => serde_json::Value::Number(v.into()),
+        AnyValue::UInt64(v) => serde_json::Value::Number(v.into()),
+        AnyValue::Float32(v) => serde_json::Number::from_f64(v as f64)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        AnyValue::Float64(v) => serde_json::Number::from_f64(v)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        AnyValue::String(s) => serde_json::Value::String(s.to_string()),
+        AnyValue::StringOwned(s) => serde_json::Value::String(s.to_string()),
+        AnyValue::Date(days) => {
+            // Convert days since epoch to ISO date string
+            let date = chrono::NaiveDate::from_num_days_from_ce_opt(days + 719163)
+                .unwrap_or_default();
+            serde_json::Value::String(date.format("%Y-%m-%d").to_string())
+        }
+        AnyValue::Datetime(us, _, _) => {
+            // Convert microseconds to ISO datetime string
+            let dt = chrono::DateTime::from_timestamp_micros(us).unwrap_or_default();
+            serde_json::Value::String(dt.format("%Y-%m-%dT%H:%M:%S%.6fZ").to_string())
+        }
+        // Fallback: convert to string representation
+        _ => serde_json::Value::String(format!("{}", any_value)),
+    }
+}
+
 /// GET /api/v1/health - Health check
 async fn health_handler() -> Json<HealthResponse> {
     Json(HealthResponse {
@@ -659,12 +772,19 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Build router
-    let app = Router::new()
+    let mut app = Router::new()
         .route("/", get(root_handler))
         .route("/api/v1/query", post(query_handler))
         .route("/api/v1/parse", post(parse_handler))
         .route("/api/v1/health", get(health_handler))
-        .route("/api/v1/version", get(version_handler))
+        .route("/api/v1/version", get(version_handler));
+
+    #[cfg(feature = "duckdb")]
+    {
+        app = app.route("/api/v1/sql", post(sql_handler));
+    }
+
+    let app = app
         .layer(cors)
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .with_state(state);
@@ -676,9 +796,10 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Starting ggsql REST API server on {}", addr);
     info!("API documentation:");
-    info!("  POST /api/v1/query  - Execute ggsql query");
-    info!("  POST /api/v1/parse  - Parse ggsql query");
-    info!("  GET  /api/v1/health - Health check");
+    info!("  POST /api/v1/query   - Execute ggsql query (with VISUALISE)");
+    info!("  POST /api/v1/sql     - Execute plain SQL query");
+    info!("  POST /api/v1/parse   - Parse ggsql query");
+    info!("  GET  /api/v1/health  - Health check");
     info!("  GET  /api/v1/version - Version info");
 
     // Start server
