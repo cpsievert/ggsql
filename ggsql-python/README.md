@@ -42,13 +42,9 @@ pip install target/wheels/ggsql-*.whl
 
 ## Quick Start
 
-### Simple Usage with `render_altair`
-
-For quick visualizations, use the `render_altair` convenience function:
-
 ```python
-import ggsql
 import polars as pl
+import ggsql
 
 # Create a DataFrame
 df = pl.DataFrame({
@@ -57,89 +53,83 @@ df = pl.DataFrame({
     "category": ["A", "B", "A", "B", "A"]
 })
 
-# Render to Altair chart
-chart = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
-
-# Display or save
-chart.display()  # In Jupyter
-chart.save("chart.html")  # Save to file
-```
-
-### Two-Stage API
-
-For more control, use the two-stage API with explicit reader and writer:
-
-```python
-import ggsql
-import polars as pl
-
-# 1. Create a DuckDB reader
-reader = ggsql.DuckDBReader("duckdb://memory")
-
-# 2. Register your DataFrame as a table
-df = pl.DataFrame({
-    "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-    "revenue": [100, 150, 120],
-    "region": ["North", "South", "North"]
-})
-reader.register("sales", df)
-
-# 3. Prepare the visualization
-prepared = ggsql.prepare(
-    """
-    SELECT * FROM sales
-    VISUALISE date AS x, revenue AS y, region AS color
-    DRAW line
-    LABEL title => 'Sales by Region'
-    """,
-    reader
+# Create reader and execute query with inline data registration
+reader = ggsql.readers.DuckDB("duckdb://memory")
+spec = reader.execute(
+    "SELECT * FROM data VISUALISE x, y, category AS color DRAW point",
+    {"data": df}
 )
 
-# 4. Inspect metadata
-print(f"Rows: {prepared.metadata()['rows']}")
-print(f"Columns: {prepared.metadata()['columns']}")
-print(f"Layers: {prepared.layer_count()}")
+# Render to Vega-Lite JSON
+writer = ggsql.writers.VegaLite()
+json_str = writer.render_json(spec)
 
-# 5. Inspect SQL/VISUALISE portions and data
-print(f"SQL: {prepared.sql()}")
-print(f"Visual: {prepared.visual()}")
-print(prepared.data())  # Returns polars DataFrame
-
-# 6. Render to Vega-Lite JSON
-writer = ggsql.VegaLiteWriter()
-vegalite_json = prepared.render(writer)
-print(vegalite_json)
+# Or render to Altair chart
+chart = writer.render_chart(spec)
+chart.display()  # In Jupyter
 ```
 
 ## API Reference
 
-### Classes
+### Modules
 
-#### `DuckDBReader(connection: str)`
+#### `ggsql.readers`
+
+Database reader classes.
+
+##### `DuckDB(connection: str)`
 
 Database reader that executes SQL and manages DataFrames.
 
 ```python
-reader = ggsql.DuckDBReader("duckdb://memory")  # In-memory database
-reader = ggsql.DuckDBReader("duckdb:///path/to/file.db")  # File database
+import ggsql
+
+reader = ggsql.readers.DuckDB("duckdb://memory")  # In-memory database
+reader = ggsql.readers.DuckDB("duckdb:///path/to/file.db")  # File database
 ```
 
 **Methods:**
 
-- `register(name: str, df: polars.DataFrame)` - Register a DataFrame as a queryable table
-- `execute(sql: str) -> polars.DataFrame` - Execute SQL and return results
-- `supports_register() -> bool` - Check if registration is supported
+- `execute(query: str, data: dict[str, DataFrame] | None = None) -> Prepared` - Execute a ggsql query with optional DataFrame registration. DataFrames are automatically registered before execution and unregistered afterward. Raises `NoVisualiseError` if query has no VISUALISE clause.
+- `execute_sql(sql: str) -> pl.DataFrame` - Execute plain SQL and return results (no VISUALISE clause needed)
+- `register(name: str, df: DataFrame) -> None` - Manually register a DataFrame as a queryable table
+- `unregister(name: str) -> None` - Unregister a table (fails silently if not found)
 
-#### `VegaLiteWriter()`
+**Context manager:** DuckDB supports the context manager protocol for use with `with` statements:
+
+```python
+with ggsql.readers.DuckDB("duckdb://memory") as reader:
+    spec = reader.execute(query, {"data": df})
+```
+
+**DataFrame support:** Accepts any [narwhals](https://narwhals-dev.github.io/narwhals/)-compatible DataFrame (polars, pandas, pyarrow, etc.).
+
+#### `ggsql.writers`
+
+Output writer classes.
+
+##### `VegaLite()`
 
 Writer that generates Vega-Lite v6 JSON specifications.
 
 ```python
-writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
+import ggsql
+
+writer = ggsql.writers.VegaLite()
+json_str = writer.render_json(spec)
+chart = writer.render_chart(spec)
 ```
 
-#### `Validated`
+**Methods:**
+
+- `render_json(spec: Prepared) -> str` - Render to Vega-Lite JSON string
+- `render_chart(spec: Prepared, **kwargs) -> AltairChart` - Render to Altair chart object
+
+#### `ggsql.types`
+
+Type classes returned by ggsql functions.
+
+##### `Validated`
 
 Result of `validate()` containing query analysis without SQL execution.
 
@@ -152,23 +142,53 @@ Result of `validate()` containing query analysis without SQL execution.
 - `errors() -> list[dict]` - Validation errors with messages and locations
 - `warnings() -> list[dict]` - Validation warnings
 
-#### `Prepared`
+##### `Prepared`
 
-Result of `prepare()`, containing resolved visualization ready for rendering.
+Result of `reader.execute()`, containing resolved visualization ready for rendering.
 
 **Methods:**
 
-- `render(writer: VegaLiteWriter) -> str` - Generate Vega-Lite JSON
 - `metadata() -> dict` - Get `{"rows": int, "columns": list[str], "layer_count": int}`
 - `sql() -> str` - The executed SQL query
 - `visual() -> str` - The VISUALISE clause
 - `layer_count() -> int` - Number of DRAW layers
-- `data() -> polars.DataFrame | None` - Main query result DataFrame
-- `layer_data(index: int) -> polars.DataFrame | None` - Layer-specific data (if filtered)
-- `stat_data(index: int) -> polars.DataFrame | None` - Statistical transform data
+- `data() -> pl.DataFrame | None` - Main query result DataFrame
+- `layer_data(index: int) -> pl.DataFrame | None` - Layer-specific data (if filtered)
+- `stat_data(index: int) -> pl.DataFrame | None` - Statistical transform data
 - `layer_sql(index: int) -> str | None` - Layer filter SQL
 - `stat_sql(index: int) -> str | None` - Stat transform SQL
 - `warnings() -> list[dict]` - Validation warnings from preparation
+
+### Exceptions
+
+All ggsql exceptions inherit from `GgsqlError`, allowing you to catch all ggsql-specific errors:
+
+```python
+try:
+    spec = reader.execute(query)
+except ggsql.types.GgsqlError as e:
+    print(f"ggsql error: {e}")
+```
+
+#### Exception Hierarchy
+
+- `GgsqlError` - Base exception for all ggsql errors
+  - `ParseError` - Query parsing failed
+  - `ValidationError` - Query validation failed (e.g., missing required aesthetics)
+  - `ReaderError` - Database/SQL execution failed
+  - `WriterError` - Output generation failed
+  - `NoVisualiseError` - Query has no VISUALISE clause
+
+#### `NoVisualiseError`
+
+Raised when `reader.execute()` is called on a query without a VISUALISE clause. Use `reader.execute_sql()` for plain SQL queries.
+
+```python
+try:
+    spec = reader.execute("SELECT * FROM data")  # No VISUALISE
+except ggsql.types.NoVisualiseError:
+    df = reader.execute_sql("SELECT * FROM data")  # Use this instead
+```
 
 ### Functions
 
@@ -185,36 +205,48 @@ else:
         print(f"Error: {error['message']}")
 ```
 
-#### `prepare(query: str, reader: DuckDBReader) -> Prepared`
+## Examples
 
-Parse, validate, and execute a ggsql query.
-
-```python
-reader = ggsql.DuckDBReader("duckdb://memory")
-prepared = ggsql.prepare("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point", reader)
-```
-
-#### `render_altair(df, viz: str, **kwargs) -> altair.Chart`
-
-Convenience function to render a DataFrame with a VISUALISE spec to an Altair chart.
-
-**Parameters:**
-
-- `df` - Any narwhals-compatible DataFrame (polars, pandas, etc.). LazyFrames are collected automatically.
-- `viz` - The VISUALISE specification string
-- `**kwargs` - Additional arguments passed to `altair.Chart.from_json()` (e.g., `validate=False`)
-
-**Returns:** An Altair chart object (Chart, LayerChart, FacetChart, etc.)
+### Basic Usage
 
 ```python
 import polars as pl
 import ggsql
 
 df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-chart = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
+
+reader = ggsql.readers.DuckDB("duckdb://memory")
+spec = reader.execute("SELECT * FROM data VISUALISE x, y DRAW point", {"data": df})
+
+writer = ggsql.writers.VegaLite()
+chart = writer.render_chart(spec)
 ```
 
-## Examples
+### Multiple Tables
+
+```python
+sales = pl.DataFrame({"id": [1, 2], "product_id": [1, 1], "amount": [100, 200]})
+products = pl.DataFrame({"id": [1], "name": ["Widget"]})
+
+spec = reader.execute(
+    """
+    SELECT s.id, s.amount, p.name
+    FROM sales s JOIN products p ON s.product_id = p.id
+    VISUALISE id AS x, amount AS y, name AS color
+    DRAW bar
+    """,
+    {"sales": sales, "products": products}
+)
+```
+
+### VISUALISE FROM Shorthand
+
+```python
+spec = reader.execute(
+    "VISUALISE FROM data DRAW point MAPPING x AS x, y AS y",
+    {"data": df}
+)
+```
 
 ### Mapping Styles
 
@@ -222,71 +254,45 @@ chart = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
 df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30], "category": ["A", "B", "A"]})
 
 # Explicit mapping
-ggsql.render_altair(df, "VISUALISE x AS x, y AS y DRAW point")
+spec = reader.execute("SELECT * FROM df VISUALISE x AS x, y AS y DRAW point", {"df": df})
 
 # Implicit mapping (column name = aesthetic name)
-ggsql.render_altair(df, "VISUALISE x, y DRAW point")
+spec = reader.execute("SELECT * FROM df VISUALISE x, y DRAW point", {"df": df})
 
 # Wildcard mapping (map all matching columns)
-ggsql.render_altair(df, "VISUALISE * DRAW point")
+spec = reader.execute("SELECT * FROM df VISUALISE * DRAW point", {"df": df})
 
 # With color encoding
-ggsql.render_altair(df, "VISUALISE x, y, category AS color DRAW point")
+spec = reader.execute("SELECT * FROM df VISUALISE x, y, category AS color DRAW point", {"df": df})
 ```
 
-### Custom Readers
+### Using Pandas DataFrames
 
-You can use any Python object with an `execute(sql: str) -> polars.DataFrame` method as a reader. This enables integration with any data source.
+```python
+import pandas as pd
+import ggsql
+
+# Works with pandas DataFrames (via narwhals)
+df = pd.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+
+reader = ggsql.readers.DuckDB("duckdb://memory")
+spec = reader.execute("SELECT * FROM data VISUALISE x, y DRAW point", {"data": df})
+
+writer = ggsql.writers.VegaLite()
+chart = writer.render_chart(spec)
+```
+
+### Handling Plain SQL
 
 ```python
 import ggsql
-import polars as pl
 
-class CSVReader:
-    """Custom reader that loads data from CSV files."""
-
-    def __init__(self, data_dir: str):
-        self.data_dir = data_dir
-
-    def execute(self, sql: str) -> pl.DataFrame:
-        # Simple implementation: ignore SQL and return fixed data
-        # A real implementation would parse SQL to determine which file to load
-        return pl.read_csv(f"{self.data_dir}/data.csv")
-
-# Use custom reader with prepare()
-reader = CSVReader("/path/to/data")
-prepared = ggsql.prepare(
-    "SELECT * FROM data VISUALISE x, y DRAW point",
-    reader
-)
-writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
+try:
+    spec = reader.execute("SELECT * FROM data", {"data": df})
+except ggsql.types.NoVisualiseError:
+    # Use execute_sql() for queries without VISUALISE
+    result_df = reader.execute_sql("SELECT * FROM data")
 ```
-
-**Optional methods** for custom readers:
-
-- `supports_register() -> bool` - Return `True` if your reader supports DataFrame registration
-- `register(name: str, df: polars.DataFrame) -> None` - Register a DataFrame as a queryable table
-
-```python
-class AdvancedReader:
-    """Custom reader with registration support."""
-
-    def __init__(self):
-        self.tables = {}
-
-    def execute(self, sql: str) -> pl.DataFrame:
-        # Your SQL execution logic here
-        ...
-
-    def supports_register(self) -> bool:
-        return True
-
-    def register(self, name: str, df: pl.DataFrame) -> None:
-        self.tables[name] = df
-```
-
-Native readers like `DuckDBReader` use an optimized fast path, while custom Python readers are automatically bridged via IPC serialization.
 
 ## Development
 
@@ -319,7 +325,7 @@ pytest tests/ -v
 
 - Python >= 3.10
 - altair >= 5.0
-- narwhals >= 2.15
+- narwhals >= 1.0
 - polars >= 1.0
 
 ## License

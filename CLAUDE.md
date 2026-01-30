@@ -165,7 +165,7 @@ let prepared = ggsql::prepare(
 
 // Render to Vega-Lite JSON
 let writer = VegaLiteWriter::new();
-let json = prepared.render(&writer)?;
+let json = writer.render(&prepared)?;
 ```
 
 ### Core Functions
@@ -869,13 +869,12 @@ When running in Positron IDE, the extension provides enhanced functionality:
 **Features**:
 
 - PyO3-based Rust bindings compiled to a native Python extension
-- Two-stage API mirroring the Rust API: `prepare()` → `render()`
-- DuckDB reader with DataFrame registration
-- Custom Python reader support: any object with `execute(sql) -> DataFrame` method
-- Works with any narwhals-compatible DataFrame (polars, pandas, etc.)
-- LazyFrames are collected automatically
-- Returns native `altair.Chart` objects via `render_altair()` convenience function
+- Two-stage API: `reader.execute()` → `writer.render()`
+- DuckDB reader with inline DataFrame registration via `execute(query, data_dict)`
+- Automatic table cleanup after query execution
+- Returns native `altair.Chart` objects via `writer.render_chart()`
 - Query validation and introspection (SQL, layer queries, stat queries)
+- `NoVisualiseError` exception for queries without VISUALISE clause
 
 **Installation**:
 
@@ -892,40 +891,24 @@ maturin develop
 import ggsql
 import polars as pl
 
-# Create reader and register data
-reader = ggsql.DuckDBReader("duckdb://memory")
 df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-reader.register("data", df)
 
-# Prepare visualization
-prepared = ggsql.prepare(
+# Execute with inline data registration (auto-registers and unregisters)
+reader = ggsql.DuckDBReader("duckdb://memory")
+spec = reader.execute(
     "SELECT * FROM data VISUALISE x, y DRAW point",
-    reader
+    {"data": df}
 )
 
 # Inspect metadata
-print(f"Rows: {prepared.metadata()['rows']}")
-print(f"Columns: {prepared.metadata()['columns']}")
-print(f"SQL: {prepared.sql()}")
+print(f"Rows: {spec.metadata()['rows']}")
+print(f"Columns: {spec.metadata()['columns']}")
+print(f"SQL: {spec.sql()}")
 
-# Render to Vega-Lite JSON
+# Render to Vega-Lite JSON or Altair chart
 writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
-```
-
-**Convenience Function** (`render_altair`):
-
-For quick visualizations without explicit reader setup:
-
-```python
-import ggsql
-import polars as pl
-
-df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-
-# Render DataFrame to Altair chart in one call
-chart = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
-chart.display()  # In Jupyter
+json_output = writer.render(spec)
+chart = writer.render_chart(spec)
 ```
 
 **Query Validation**:
@@ -941,73 +924,71 @@ print(f"SQL portion: {validated.sql()}")
 print(f"Errors: {validated.errors()}")
 ```
 
+**Handling Plain SQL**:
+
+```python
+try:
+    spec = reader.execute("SELECT * FROM data", {"data": df})
+except ggsql.NoVisualiseError:
+    # Use execute_sql() for queries without VISUALISE
+    result_df = reader.execute_sql("SELECT * FROM data")
+```
+
 **Classes**:
 
-| Class                      | Description                                  |
-| -------------------------- | -------------------------------------------- |
-| `DuckDBReader(connection)` | Database reader with DataFrame registration  |
-| `VegaLiteWriter()`         | Vega-Lite JSON output writer                 |
-| `Validated`                | Result of `validate()` with query inspection |
-| `Prepared`                 | Result of `prepare()`, ready for rendering   |
+| Class                      | Description                                         |
+| -------------------------- | --------------------------------------------------- |
+| `DuckDBReader(connection)` | Database reader with DataFrame registration         |
+| `VegaLiteWriter()`         | Vega-Lite JSON output writer with render methods    |
+| `Validated`                | Result of `validate()` with query inspection        |
+| `Prepared`                 | Result of `reader.execute()`, ready for rendering   |
+| `NoVisualiseError`         | Exception for queries without VISUALISE clause      |
 
 **Functions**:
 
-| Function                 | Description                                       |
-| ------------------------ | ------------------------------------------------- |
-| `validate(query)`        | Syntax/semantic validation with query inspection  |
-| `prepare(query, reader)` | Full preparation (reader can be native or custom) |
-| `render_altair(df, viz)` | Convenience: render DataFrame to Altair chart     |
+| Function          | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `validate(query)` | Syntax/semantic validation with query inspection |
+
+**DuckDBReader Methods**:
+
+| Method                       | Description                                              |
+| ---------------------------- | -------------------------------------------------------- |
+| `execute(query, data=None)`  | Execute ggsql query with optional data dict registration |
+| `execute_sql(sql)`           | Execute plain SQL, return DataFrame                      |
+| `register(name, df)`         | Manually register DataFrame as table                     |
+| `unregister(name)`           | Unregister table (fails silently if not found)           |
+
+**VegaLiteWriter Methods**:
+
+| Method                    | Description                          |
+| ------------------------- | ------------------------------------ |
+| `render(spec)`            | Render to Vega-Lite JSON string      |
+| `render_chart(spec)`      | Render to Altair chart object        |
 
 **Prepared Object Methods**:
 
-| Method           | Description                                  |
-| ---------------- | -------------------------------------------- |
-| `render(writer)` | Generate Vega-Lite JSON                      |
-| `metadata()`     | Get rows, columns, layer_count               |
-| `sql()`          | Get the SQL portion                          |
-| `visual()`       | Get the VISUALISE portion                    |
-| `layer_count()`  | Number of DRAW layers                        |
-| `data()`         | Get the main DataFrame                       |
-| `layer_data(i)`  | Get layer-specific DataFrame (if filtered)   |
-| `stat_data(i)`   | Get stat transform DataFrame (if applicable) |
-| `layer_sql(i)`   | Get layer filter SQL (if applicable)         |
-| `stat_sql(i)`    | Get stat transform SQL (if applicable)       |
-| `warnings()`     | Get validation warnings                      |
+| Method          | Description                                  |
+| --------------- | -------------------------------------------- |
+| `metadata()`    | Get rows, columns, layer_count               |
+| `sql()`         | Get the SQL portion                          |
+| `visual()`      | Get the VISUALISE portion                    |
+| `layer_count()` | Number of DRAW layers                        |
+| `data()`        | Get the main DataFrame                       |
+| `layer_data(i)` | Get layer-specific DataFrame (if filtered)   |
+| `stat_data(i)`  | Get stat transform DataFrame (if applicable) |
+| `layer_sql(i)`  | Get layer filter SQL (if applicable)         |
+| `stat_sql(i)`   | Get stat transform SQL (if applicable)       |
+| `warnings()`    | Get validation warnings                      |
 
-**Custom Python Readers**:
+**Type Stubs**:
 
-Any Python object with an `execute(sql: str) -> polars.DataFrame` method can be used as a reader:
-
-```python
-import ggsql
-import polars as pl
-
-class MyReader:
-    """Custom reader that returns static data."""
-
-    def execute(self, sql: str) -> pl.DataFrame:
-        return pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
-
-# Use custom reader with prepare()
-reader = MyReader()
-prepared = ggsql.prepare(
-    "SELECT * FROM data VISUALISE x, y DRAW point",
-    reader
-)
-```
-
-Optional methods for custom readers:
-
-- `supports_register() -> bool` - Return `True` if registration is supported
-- `register(name: str, df: polars.DataFrame) -> None` - Register a DataFrame as a table
-
-Native readers (e.g., `DuckDBReader`) use an optimized fast path, while custom Python readers are automatically bridged via IPC serialization.
+The Python package includes manually maintained type stubs (`ggsql-python/python/ggsql/_ggsql.pyi`) that provide IDE support and type checking for the native Rust extension. When making API changes to `ggsql-python/src/lib.rs`, always update the corresponding stubs to keep them in sync. The stubs include detailed docstrings that appear in IDE tooltips, so they provide significant value beyond just type information.
 
 **Dependencies**:
 
 - Python >= 3.10
 - altair >= 5.0
-- narwhals >= 2.15
 - polars >= 1.0
 
 ---

@@ -5,14 +5,14 @@ This document provides a comprehensive reference for the ggsql public API.
 ## Overview
 
 - **Stage 1: `prepare()`** - Parse query, execute SQL, resolve mappings, prepare data
-- **Stage 2: `render()`** - Generate output (Vega-Lite JSON, etc.)
+- **Stage 2: `writer.render()`** - Generate output (Vega-Lite JSON, etc.)
 
 ### API Functions
 
 | Function     | Use Case                                             |
 | ------------ | ---------------------------------------------------- |
 | `prepare()`  | Main entry point - full visualization pipeline       |
-| `render()`   | Generate output from prepared data                   |
+| `writer.render()` | Generate output from prepared data              |
 | `validate()` | Validate syntax + semantics, inspect query structure |
 
 ---
@@ -50,7 +50,7 @@ Prepare a ggsql query for visualization. This is the main entry point for the tw
 **Example:**
 
 ```rust
-use ggsql::{prepare, reader::DuckDBReader, writer::VegaLiteWriter};
+use ggsql::{prepare, reader::DuckDBReader, writer::{VegaLiteWriter, Writer}};
 
 let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
 let prepared = prepare(
@@ -64,7 +64,7 @@ println!("Columns: {:?}", prepared.metadata().columns);
 
 // Render to Vega-Lite
 let writer = VegaLiteWriter::new();
-let result = prepared.render(&writer)?;
+let result = writer.render(&prepared)?;
 ```
 
 **Error Conditions:**
@@ -188,20 +188,6 @@ if let Some(tree) = validated.tree() {
 
 Result of preparing a visualization, ready for rendering.
 
-#### Rendering Methods
-
-| Method   | Signature                                                 | Description             |
-| -------- | --------------------------------------------------------- | ----------------------- |
-| `render` | `fn render(&self, writer: &dyn Writer) -> Result<String>` | Render to output format |
-
-**Example:**
-
-```rust
-let writer = VegaLiteWriter::new();
-let json = prepared.render(&writer)?;
-println!("{}", json);
-```
-
 #### Plot Access Methods
 
 | Method        | Signature                        | Description                     |
@@ -309,7 +295,8 @@ if !prepared.warnings().is_empty() {
 }
 
 // Continue with rendering
-let json = prepared.render(&writer)?;
+let writer = VegaLiteWriter::new();
+let json = writer.render(&prepared)?;
 ```
 
 ---
@@ -374,10 +361,13 @@ pub struct Location {
 ```rust
 pub trait Reader {
     /// Execute a SQL query and return a DataFrame
-    fn execute(&self, sql: &str) -> Result<DataFrame>;
+    fn execute_sql(&self, sql: &str) -> Result<DataFrame>;
 
     /// Register a DataFrame as a queryable table
     fn register(&mut self, name: &str, df: DataFrame) -> Result<()>;
+
+    /// Unregister a table (fails silently if not found)
+    fn unregister(&mut self, name: &str);
 
     /// Check if this reader supports DataFrame registration
     fn supports_register(&self) -> bool;
@@ -392,24 +382,45 @@ pub trait Reader {
 
 ```rust
 pub trait Writer {
-    /// Render a plot specification to output format
+    /// Render a prepared visualization to output format
+    fn render(&self, prepared: &Prepared) -> Result<String>;
+
+    /// Lower-level: render from plot specification and data map
     fn write(&self, spec: &Plot, data: &HashMap<String, DataFrame>) -> Result<String>;
 
-    /// Get the file extension for this writer's output
-    fn file_extension(&self) -> &str;
+    /// Validate that a spec is compatible with this writer
+    fn validate(&self, spec: &Plot) -> Result<()>;
 }
 ```
+
+**Example:**
+
+```rust
+use ggsql::writer::{VegaLiteWriter, Writer};
+
+let writer = VegaLiteWriter::new();
+let json = writer.render(&prepared)?;
+println!("{}", json);
+```
+
+---
 
 ## Python Bindings
 
 The Python bindings provide the same two-stage API with Pythonic conventions.
 
+### Module Structure
+
+- `ggsql.readers` - Reader classes (`DuckDB`)
+- `ggsql.writers` - Writer classes (`VegaLite`)
+- `ggsql` - Types (`Validated`, `Prepared`), exceptions (`NoVisualiseError`), and functions (`validate`)
+
 ### Classes
 
-#### `DuckDBReader`
+#### `ggsql.readers.DuckDB`
 
 ```python
-class DuckDBReader:
+class DuckDB:
     def __init__(self, connection: str) -> None:
         """Create a DuckDB reader.
 
@@ -417,27 +428,58 @@ class DuckDBReader:
             connection: Connection string (e.g., "duckdb://memory")
         """
 
-    def register(self, name: str, df: Any) -> None:
-        """Register a DataFrame as a queryable table.
+    def execute(
+        self,
+        query: str,
+        data: dict[str, polars.DataFrame] | None = None
+    ) -> Prepared:
+        """Execute a ggsql query with optional DataFrame registration.
+
+        DataFrames are registered before execution and automatically
+        unregistered afterward (even on error).
 
         Args:
-            name: Table name
-            df: Polars DataFrame or narwhals-compatible DataFrame
+            query: The ggsql query (must contain VISUALISE clause)
+            data: DataFrames to register as tables (keys are table names)
+
+        Returns:
+            Prepared visualization ready for rendering
+
+        Raises:
+            NoVisualiseError: If query has no VISUALISE clause
+            ValueError: If parsing or execution fails
         """
 
-    def execute(self, sql: str) -> polars.DataFrame:
-        """Execute SQL and return a Polars DataFrame."""
+    def execute_sql(self, sql: str) -> polars.DataFrame:
+        """Execute plain SQL and return a Polars DataFrame."""
 
-    def supports_register(self) -> bool:
-        """Check if registration is supported."""
+    def register(self, name: str, df: polars.DataFrame) -> None:
+        """Manually register a DataFrame as a queryable table."""
+
+    def unregister(self, name: str) -> None:
+        """Unregister a table (fails silently if not found)."""
 ```
 
-#### `VegaLiteWriter`
+#### `ggsql.writers.VegaLite`
 
 ```python
-class VegaLiteWriter:
+class VegaLite:
     def __init__(self) -> None:
         """Create a Vega-Lite writer."""
+
+    def render(self, spec: Prepared) -> str:
+        """Render to Vega-Lite JSON string."""
+
+    def render_chart(self, spec: Prepared, **kwargs) -> AltairChart:
+        """Render to Altair chart object.
+
+        Args:
+            spec: Prepared visualization from reader.execute()
+            **kwargs: Additional args for altair.Chart.from_json()
+
+        Returns:
+            Altair chart (Chart, LayerChart, FacetChart, etc.)
+        """
 ```
 
 #### `Validated`
@@ -469,9 +511,6 @@ class Validated:
 
 ```python
 class Prepared:
-    def render(self, writer: VegaLiteWriter) -> str:
-        """Render to output format."""
-
     def metadata(self) -> dict:
         """Get metadata as dict with keys: rows, columns, layer_count."""
 
@@ -503,6 +542,13 @@ class Prepared:
         """Get stat transform query."""
 ```
 
+### Exceptions
+
+```python
+class NoVisualiseError(Exception):
+    """Raised when execute() is called on a query without VISUALISE clause."""
+```
+
 ### Functions
 
 ```python
@@ -511,7 +557,26 @@ def validate(query: str) -> Validated:
 
     Returns Validated object with query inspection and validation methods.
     """
+```
 
-def prepare(query: str, reader: DuckDBReader) -> Prepared:
-    """Prepare a query for visualization."""
+### Usage Example
+
+```python
+import polars as pl
+from ggsql.readers import DuckDB
+from ggsql.writers import VegaLite
+
+# Create data
+df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
+
+# Execute with inline data registration
+reader = DuckDB("duckdb://memory")
+spec = reader.execute(
+    "SELECT * FROM data VISUALISE x, y DRAW point",
+    {"data": df}
+)
+
+# Render to Altair chart
+writer = VegaLite()
+chart = writer.render_chart(spec)
 ```
