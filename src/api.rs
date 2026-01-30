@@ -13,9 +13,6 @@ use crate::execute::prepare_data_with_executor;
 #[cfg(feature = "duckdb")]
 use crate::reader::Reader;
 
-#[cfg(feature = "vegalite")]
-use crate::writer::Writer;
-
 // ============================================================================
 // Core Types
 // ============================================================================
@@ -87,12 +84,6 @@ impl Prepared {
             stat_sql,
             warnings,
         }
-    }
-
-    /// Render to output format (e.g., Vega-Lite JSON).
-    #[cfg(feature = "vegalite")]
-    pub fn render(&self, writer: &dyn Writer) -> Result<String> {
-        writer.write(&self.plot, &self.data)
     }
 
     /// Get the resolved plot specification.
@@ -245,7 +236,7 @@ pub fn prepare(query: &str, reader: &dyn Reader) -> Result<Prepared> {
     let warnings: Vec<ValidationWarning> = validated.warnings().to_vec();
 
     // Prepare data (this also validates, but we want the warnings from above)
-    let prepared_data = prepare_data_with_executor(query, |sql| reader.execute(sql))?;
+    let prepared_data = prepare_data_with_executor(query, |sql| reader.execute_sql(sql))?;
 
     Ok(Prepared::new(
         prepared_data.spec,
@@ -429,7 +420,7 @@ mod tests {
     #[test]
     fn test_prepare_and_render() {
         use crate::reader::DuckDBReader;
-        use crate::writer::VegaLiteWriter;
+        use crate::writer::{VegaLiteWriter, Writer};
 
         let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
         let prepared = prepare("SELECT 1 as x, 2 as y VISUALISE x, y DRAW point", &reader).unwrap();
@@ -439,7 +430,7 @@ mod tests {
         assert!(prepared.data().is_some());
 
         let writer = VegaLiteWriter::new();
-        let result = prepared.render(&writer).unwrap();
+        let result = writer.render(&prepared).unwrap();
         assert!(result.contains("point"));
     }
 
@@ -489,7 +480,7 @@ mod tests {
     #[test]
     fn test_render_multi_layer() {
         use crate::reader::DuckDBReader;
-        use crate::writer::VegaLiteWriter;
+        use crate::writer::{VegaLiteWriter, Writer};
 
         let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
         let query = r#"
@@ -501,7 +492,7 @@ mod tests {
 
         let prepared = prepare(query, &reader).unwrap();
         let writer = VegaLiteWriter::new();
-        let result = prepared.render(&writer).unwrap();
+        let result = writer.render(&prepared).unwrap();
 
         assert!(result.contains("layer"));
     }
@@ -510,7 +501,7 @@ mod tests {
     #[test]
     fn test_register_and_query() {
         use crate::reader::{DuckDBReader, Reader};
-        use crate::writer::VegaLiteWriter;
+        use crate::writer::{VegaLiteWriter, Writer};
         use polars::prelude::*;
 
         let mut reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
@@ -530,7 +521,7 @@ mod tests {
         assert!(prepared.metadata().columns.contains(&"x".to_string()));
 
         let writer = VegaLiteWriter::new();
-        let result = prepared.render(&writer).unwrap();
+        let result = writer.render(&prepared).unwrap();
         assert!(result.contains("point"));
     }
 

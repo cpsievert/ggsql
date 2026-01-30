@@ -15,7 +15,7 @@ use ggsql::reader::{DuckDBReader, Reader};
 use ggsql::{prepare, validate};
 
 #[cfg(feature = "vegalite")]
-use ggsql::writer::VegaLiteWriter;
+use ggsql::writer::{VegaLiteWriter, Writer};
 
 #[derive(Parser)]
 #[command(name = "ggsql")]
@@ -222,7 +222,7 @@ fn cmd_exec(query: String, reader: String, writer: String, output: Option<PathBu
 
     // Render
     let vl_writer = VegaLiteWriter::new();
-    let json_output = match prepared.render(&vl_writer) {
+    let json_output = match vl_writer.render(&prepared) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Failed to generate Vega-Lite output: {}", e);
@@ -335,7 +335,7 @@ fn print_table_fallback(query: &str, reader: &DuckDBReader, max_rows: usize) {
     }
     let parsed = parsed.unwrap();
 
-    let data = reader.execute(&parsed);
+    let data = reader.execute_sql(&parsed);
     if let Err(e) = data {
         eprintln!("Failed to execute SQL query: {}", e);
         std::process::exit(1)

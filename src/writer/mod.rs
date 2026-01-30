@@ -1,13 +1,13 @@
 //! Output writer abstraction layer for ggsql
 //!
 //! The writer module provides a pluggable interface for generating visualization
-//! outputs from Plot + DataFrame combinations.
+//! outputs from Prepared specifications.
 //!
 //! # Architecture
 //!
 //! All writers implement the `Writer` trait, which provides:
-//! - Spec + Data → Output conversion
-//! - Validation for writer compatibility
+//! - Prepared → Output conversion via `render()`
+//! - Low-level Plot + Data → Output via `write()`
 //! - Format-specific rendering logic
 //!
 //! # Example
@@ -16,10 +16,11 @@
 //! use ggsql::writer::{Writer, VegaLiteWriter};
 //!
 //! let writer = VegaLiteWriter::new();
-//! let json = writer.write(&spec, &dataframe)?;
+//! let json = writer.render(&prepared)?;
 //! println!("{}", json);
 //! ```
 
+use crate::api::Prepared;
 use crate::{DataFrame, Plot, Result};
 use std::collections::HashMap;
 
@@ -31,10 +32,33 @@ pub use vegalite::VegaLiteWriter;
 
 /// Trait for visualization output writers
 ///
-/// Writers take a Plot and data sources and produce formatted output
+/// Writers take a Prepared specification and produce formatted output
 /// (JSON, R code, PNG bytes, etc.).
 pub trait Writer {
+    /// Render a prepared visualization to output format
+    ///
+    /// This is the primary rendering method. It extracts the plot and data
+    /// from the Prepared object and generates the output.
+    ///
+    /// # Arguments
+    ///
+    /// * `prepared` - The prepared visualization (from `reader.execute()`)
+    ///
+    /// # Returns
+    ///
+    /// A string containing the formatted output (JSON, code, etc.)
+    ///
+    /// # Errors
+    ///
+    /// Returns `GgsqlError::WriterError` if rendering fails
+    fn render(&self, prepared: &Prepared) -> Result<String> {
+        self.write(prepared.plot(), prepared.data_map())
+    }
+
     /// Generate output from a visualization specification and data sources
+    ///
+    /// This is a lower-level method that takes the plot and data separately.
+    /// Most callers should use `render()` instead.
     ///
     /// # Arguments
     ///

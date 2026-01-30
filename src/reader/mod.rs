@@ -17,12 +17,12 @@
 //!
 //! // Basic usage
 //! let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
-//! let df = reader.execute("SELECT * FROM table")?;
+//! let df = reader.execute_sql("SELECT * FROM table")?;
 //!
 //! // With DataFrame registration
 //! let mut reader = DuckDBReader::from_connection_string("duckdb://memory")?;
 //! reader.register("my_table", some_dataframe)?;
-//! let result = reader.execute("SELECT * FROM my_table")?;
+//! let result = reader.execute_sql("SELECT * FROM my_table")?;
 //! ```
 
 use crate::{DataFrame, GgsqlError, Result};
@@ -53,7 +53,10 @@ pub use duckdb::DuckDBReader;
 /// reader.register("sales", sales_df)?;
 ///
 /// // Now you can query it
-/// let result = reader.execute("SELECT * FROM sales WHERE amount > 100")?;
+/// let result = reader.execute_sql("SELECT * FROM sales WHERE amount > 100")?;
+///
+/// // Unregister when done (fails silently if table doesn't exist)
+/// reader.unregister("sales");
 /// ```
 pub trait Reader {
     /// Execute a SQL query and return the result as a DataFrame
@@ -72,7 +75,7 @@ pub trait Reader {
     /// - The SQL is invalid
     /// - The connection fails
     /// - The table or columns don't exist
-    fn execute(&self, sql: &str) -> Result<DataFrame>;
+    fn execute_sql(&self, sql: &str) -> Result<DataFrame>;
 
     /// Register a DataFrame as a queryable table (takes ownership)
     ///
@@ -98,6 +101,22 @@ pub trait Reader {
             "This reader does not support DataFrame registration for table '{}'",
             name
         )))
+    }
+
+    /// Unregister a table by name.
+    ///
+    /// This removes a previously registered DataFrame from the reader.
+    /// Fails silently if the table doesn't exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The table name to unregister
+    ///
+    /// # Default Implementation
+    ///
+    /// Does nothing by default. Override for readers that support registration.
+    fn unregister(&mut self, _name: &str) {
+        // Default: fail silently
     }
 
     /// Check if this reader supports DataFrame registration

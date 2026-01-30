@@ -461,7 +461,7 @@ async fn query_handler(
         #[cfg(feature = "vegalite")]
         if request.writer == "vegalite" {
             let writer = VegaLiteWriter::new();
-            let json_output = prepared.render(&writer)?;
+            let json_output = writer.render(&prepared)?;
             let spec_value: serde_json::Value = serde_json::from_str(&json_output)
                 .map_err(|e| GgsqlError::WriterError(format!("Failed to parse JSON: {}", e)))?;
 

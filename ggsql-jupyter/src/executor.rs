@@ -8,7 +8,7 @@ use ggsql::{
     prepare,
     reader::{DuckDBReader, Reader},
     validate,
-    writer::VegaLiteWriter,
+    writer::{VegaLiteWriter, Writer},
 };
 use polars::frame::DataFrame;
 
@@ -60,7 +60,7 @@ impl QueryExecutor {
         // 2. Check if there's a visualization
         if !validated.has_visual() {
             // Pure SQL query - execute directly and return DataFrame
-            let df = self.reader.execute(code)?;
+            let df = self.reader.execute_sql(code)?;
             tracing::info!(
                 "Pure SQL executed: {} rows, {} cols",
                 df.height(),
@@ -79,7 +79,7 @@ impl QueryExecutor {
         );
 
         // 4. Render to Vega-Lite
-        let vega_json = prepared.render(&self.writer)?;
+        let vega_json = self.writer.render(&prepared)?;
 
         tracing::debug!("Generated Vega-Lite spec: {} chars", vega_json.len());
 
