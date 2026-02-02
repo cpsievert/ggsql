@@ -34,9 +34,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use ggsql::{parser, validate, GgsqlError, VERSION};
 
 #[cfg(feature = "duckdb")]
-use ggsql::prepare;
-#[cfg(feature = "duckdb")]
-use ggsql::reader::DuckDBReader;
+use ggsql::reader::{DuckDBReader, Reader};
 
 #[cfg(feature = "vegalite")]
 use ggsql::writer::VegaLiteWriter;
@@ -443,29 +441,29 @@ async fn query_handler(
     #[cfg(feature = "duckdb")]
     if request.reader.starts_with("duckdb://") {
         // Use shared reader or create new one
-        let prepared = if request.reader == "duckdb://memory" && state.reader.is_some() {
+        let spec = if request.reader == "duckdb://memory" && state.reader.is_some() {
             let reader_mutex = state.reader.as_ref().unwrap();
             let reader = reader_mutex
                 .lock()
                 .map_err(|e| GgsqlError::InternalError(format!("Failed to lock reader: {}", e)))?;
-            prepare(&request.query, &*reader)?
+            reader.execute(&request.query)?
         } else {
             let reader = DuckDBReader::from_connection_string(&request.reader)?;
-            prepare(&request.query, &reader)?
+            reader.execute(&request.query)?
         };
 
         // Get metadata
-        let metadata = prepared.metadata();
+        let metadata = spec.metadata();
 
         // Generate visualization output using writer
         #[cfg(feature = "vegalite")]
         if request.writer == "vegalite" {
             let writer = VegaLiteWriter::new();
-            let json_output = prepared.render(&writer)?;
+            let json_output = spec.render(&writer)?;
             let spec_value: serde_json::Value = serde_json::from_str(&json_output)
                 .map_err(|e| GgsqlError::WriterError(format!("Failed to parse JSON: {}", e)))?;
 
-            let plot = prepared.plot();
+            let plot = spec.plot();
 
             let result = QueryResult {
                 spec: spec_value,

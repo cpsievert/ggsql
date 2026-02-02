@@ -84,30 +84,29 @@ df = pl.DataFrame({
 })
 reader.register("sales", df)
 
-# 3. Prepare the visualization
-prepared = ggsql.prepare(
+# 3. Execute the ggsql query
+spec = reader.execute(
     """
     SELECT * FROM sales
     VISUALISE date AS x, revenue AS y, region AS color
     DRAW line
     LABEL title => 'Sales by Region'
-    """,
-    reader
+    """
 )
 
 # 4. Inspect metadata
-print(f"Rows: {prepared.metadata()['rows']}")
-print(f"Columns: {prepared.metadata()['columns']}")
-print(f"Layers: {prepared.layer_count()}")
+print(f"Rows: {spec.metadata()['rows']}")
+print(f"Columns: {spec.metadata()['columns']}")
+print(f"Layers: {spec.layer_count()}")
 
 # 5. Inspect SQL/VISUALISE portions and data
-print(f"SQL: {prepared.sql()}")
-print(f"Visual: {prepared.visual()}")
-print(prepared.data())  # Returns polars DataFrame
+print(f"SQL: {spec.sql()}")
+print(f"Visual: {spec.visual()}")
+print(spec.data())  # Returns polars DataFrame
 
 # 6. Render to Vega-Lite JSON
 writer = ggsql.VegaLiteWriter()
-vegalite_json = prepared.render(writer)
+vegalite_json = spec.render(writer)
 print(vegalite_json)
 ```
 
@@ -136,7 +135,7 @@ Writer that generates Vega-Lite v6 JSON specifications.
 
 ```python
 writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
+json_output = spec.render(writer)
 ```
 
 #### `Validated`
@@ -152,9 +151,9 @@ Result of `validate()` containing query analysis without SQL execution.
 - `errors() -> list[dict]` - Validation errors with messages and locations
 - `warnings() -> list[dict]` - Validation warnings
 
-#### `Prepared`
+#### `Spec`
 
-Result of `prepare()`, containing resolved visualization ready for rendering.
+Result of `reader.execute()`, containing resolved visualization ready for rendering.
 
 **Methods:**
 
@@ -168,7 +167,7 @@ Result of `prepare()`, containing resolved visualization ready for rendering.
 - `stat_data(index: int) -> polars.DataFrame | None` - Statistical transform data
 - `layer_sql(index: int) -> str | None` - Layer filter SQL
 - `stat_sql(index: int) -> str | None` - Stat transform SQL
-- `warnings() -> list[dict]` - Validation warnings from preparation
+- `warnings() -> list[dict]` - Validation warnings from execution
 
 ### Functions
 
@@ -185,13 +184,13 @@ else:
         print(f"Error: {error['message']}")
 ```
 
-#### `prepare(query: str, reader: DuckDBReader) -> Prepared`
+#### `reader.execute(query: str) -> Spec`
 
-Parse, validate, and execute a ggsql query.
+Execute a ggsql query and return the visualization specification.
 
 ```python
 reader = ggsql.DuckDBReader("duckdb://memory")
-prepared = ggsql.prepare("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point", reader)
+spec = reader.execute("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point")
 ```
 
 #### `render_altair(df, viz: str, **kwargs) -> altair.Chart`
@@ -253,14 +252,14 @@ class CSVReader:
         # A real implementation would parse SQL to determine which file to load
         return pl.read_csv(f"{self.data_dir}/data.csv")
 
-# Use custom reader with prepare()
+# Use custom reader with ggsql.execute()
 reader = CSVReader("/path/to/data")
-prepared = ggsql.prepare(
+spec = ggsql.execute(
     "SELECT * FROM data VISUALISE x, y DRAW point",
     reader
 )
 writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
+json_output = spec.render(writer)
 ```
 
 **Optional methods** for custom readers:

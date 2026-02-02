@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use ggsql::{
-    prepare,
     reader::{DuckDBReader, Reader},
     validate,
     writer::VegaLiteWriter,
@@ -69,17 +68,17 @@ impl QueryExecutor {
             return Ok(ExecutionResult::DataFrame(df));
         }
 
-        // 3. Prepare data using the new API
-        let prepared = prepare(code, &self.reader)?;
+        // 3. Execute ggsql query using reader
+        let spec = self.reader.execute(code)?;
 
         tracing::info!(
-            "Data prepared: {} rows, {} layers",
-            prepared.metadata().rows,
-            prepared.metadata().layer_count
+            "Query executed: {} rows, {} layers",
+            spec.metadata().rows,
+            spec.metadata().layer_count
         );
 
         // 4. Render to Vega-Lite
-        let vega_json = prepared.render(&self.writer)?;
+        let vega_json = spec.render(&self.writer)?;
 
         tracing::debug!("Generated Vega-Lite spec: {} chars", vega_json.len());
 

@@ -11,9 +11,9 @@ from ggsql._ggsql import (
     DuckDBReader,
     VegaLiteWriter,
     Validated,
-    Prepared,
+    Spec,
     validate,
-    prepare,
+    execute,
 )
 
 __all__ = [
@@ -21,10 +21,10 @@ __all__ = [
     "DuckDBReader",
     "VegaLiteWriter",
     "Validated",
-    "Prepared",
+    "Spec",
     # Functions
     "validate",
-    "prepare",
+    "execute",
     "render_altair",
 ]
 __version__ = "0.1.0"
@@ -81,10 +81,10 @@ def render_altair(
     # Build full query: SELECT * FROM __data__ + VISUALISE clause
     query = f"SELECT * FROM __data__ {viz}"
 
-    # Prepare and render
-    prepared = prepare(query, reader)
+    # Execute and render
+    spec = reader.execute(query)
     writer = VegaLiteWriter()
-    vegalite_json = prepared.render(writer)
+    vegalite_json = spec.render(writer)
 
     # Parse to determine the correct Altair class
     spec = json.loads(vegalite_json)

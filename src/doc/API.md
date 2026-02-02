@@ -4,33 +4,33 @@ This document provides a comprehensive reference for the ggsql public API.
 
 ## Overview
 
-- **Stage 1: `prepare()`** - Parse query, execute SQL, resolve mappings, prepare data
-- **Stage 2: `render()`** - Generate output (Vega-Lite JSON, etc.)
+- **Stage 1: `reader.execute()`** - Parse query, execute SQL, resolve mappings, create Spec
+- **Stage 2: `spec.render()`** - Generate output (Vega-Lite JSON, etc.)
 
 ### API Functions
 
-| Function     | Use Case                                             |
-| ------------ | ---------------------------------------------------- |
-| `prepare()`  | Main entry point - full visualization pipeline       |
-| `render()`   | Generate output from prepared data                   |
-| `validate()` | Validate syntax + semantics, inspect query structure |
+| Function           | Use Case                                             |
+| ------------------ | ---------------------------------------------------- |
+| `reader.execute()` | Main entry point - full visualization pipeline       |
+| `spec.render()`    | Generate output from Spec                            |
+| `validate()`       | Validate syntax + semantics, inspect query structure |
 
 ---
 
 ## Core Functions
 
-### `prepare`
+### `Reader::execute`
 
 ```rust
-pub fn prepare(query: &str, reader: &dyn Reader) -> Result<Prepared>
+fn execute(&self, query: &str) -> Result<Spec>
 ```
 
-Prepare a ggsql query for visualization. This is the main entry point for the two-stage API.
+Execute a ggsql query for visualization. This is the main entry point - a default method on the Reader trait.
 
-**What happens during preparation:**
+**What happens during execution:**
 
 1. Parses the query (SQL + VISUALISE portions)
-2. Executes the main SQL query using the provided reader
+2. Executes the main SQL query using the reader
 3. Resolves wildcards (`VISUALISE *`) against actual columns
 4. Merges global mappings into each layer
 5. Executes layer-specific queries (filters, stats)
@@ -40,31 +40,30 @@ Prepare a ggsql query for visualization. This is the main entry point for the tw
 **Arguments:**
 
 - `query` - The full ggsql query string
-- `reader` - A reader implementing the `Reader` trait
 
 **Returns:**
 
-- `Ok(Prepared)` - Ready for rendering
+- `Ok(Spec)` - Ready for rendering
 - `Err(GgsqlError)` - Parse, validation, or execution error
 
 **Example:**
 
 ```rust
-use ggsql::{prepare, reader::DuckDBReader, writer::VegaLiteWriter};
+use ggsql::reader::{DuckDBReader, Reader};
+use ggsql::writer::VegaLiteWriter;
 
 let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
-let prepared = prepare(
-    "SELECT x, y FROM data VISUALISE x, y DRAW point",
-    &reader
+let spec = reader.execute(
+    "SELECT x, y FROM data VISUALISE x, y DRAW point"
 )?;
 
 // Access metadata
-println!("Rows: {}", prepared.metadata().rows);
-println!("Columns: {:?}", prepared.metadata().columns);
+println!("Rows: {}", spec.metadata().rows);
+println!("Columns: {:?}", spec.metadata().columns);
 
 // Render to Vega-Lite
 let writer = VegaLiteWriter::new();
-let result = prepared.render(&writer)?;
+let result = spec.render(&writer)?;
 ```
 
 **Error Conditions:**
@@ -184,9 +183,9 @@ if let Some(tree) = validated.tree() {
 
 ---
 
-### `Prepared`
+### `Spec`
 
-Result of preparing a visualization, ready for rendering.
+Result of executing a ggsql query, ready for rendering.
 
 #### Rendering Methods
 
@@ -198,7 +197,7 @@ Result of preparing a visualization, ready for rendering.
 
 ```rust
 let writer = VegaLiteWriter::new();
-let json = prepared.render(&writer)?;
+let json = spec.render(&writer)?;
 println!("{}", json);
 ```
 
@@ -212,9 +211,9 @@ println!("{}", json);
 **Example:**
 
 ```rust
-println!("Layers: {}", prepared.layer_count());
+println!("Layers: {}", spec.layer_count());
 
-let plot = prepared.plot();
+let plot = spec.plot();
 for (i, layer) in plot.layers.iter().enumerate() {
     println!("Layer {}: {:?}", i, layer.geom);
 }
@@ -229,7 +228,7 @@ for (i, layer) in plot.layers.iter().enumerate() {
 **Example:**
 
 ```rust
-let meta = prepared.metadata();
+let meta = spec.metadata();
 println!("Rows: {}", meta.rows);
 println!("Columns: {:?}", meta.columns);
 println!("Layer count: {}", meta.layer_count);
@@ -248,17 +247,17 @@ println!("Layer count: {}", meta.layer_count);
 
 ```rust
 // Global data
-if let Some(df) = prepared.data() {
+if let Some(df) = spec.data() {
     println!("Global data: {} rows", df.height());
 }
 
 // Layer-specific data (from FILTER or FROM clause)
-if let Some(df) = prepared.layer_data(0) {
+if let Some(df) = spec.layer_data(0) {
     println!("Layer 0 has filtered data: {} rows", df.height());
 }
 
 // Stat data (histogram bins, density estimates, etc.)
-if let Some(df) = prepared.stat_data(1) {
+if let Some(df) = spec.stat_data(1) {
     println!("Layer 1 stat data: {} rows", df.height());
 }
 ```
@@ -276,15 +275,15 @@ if let Some(df) = prepared.stat_data(1) {
 
 ```rust
 // Main query
-println!("SQL: {}", prepared.sql());
-println!("Visual: {}", prepared.visual());
+println!("SQL: {}", spec.sql());
+println!("Visual: {}", spec.visual());
 
 // Per-layer queries
-for i in 0..prepared.layer_count() {
-    if let Some(sql) = prepared.layer_sql(i) {
+for i in 0..spec.layer_count() {
+    if let Some(sql) = spec.layer_sql(i) {
         println!("Layer {} filter: {}", i, sql);
     }
-    if let Some(sql) = prepared.stat_sql(i) {
+    if let Some(sql) = spec.stat_sql(i) {
         println!("Layer {} stat: {}", i, sql);
     }
 }
@@ -292,24 +291,24 @@ for i in 0..prepared.layer_count() {
 
 #### Warnings Method
 
-| Method     | Signature                                    | Description                          |
-| ---------- | -------------------------------------------- | ------------------------------------ |
-| `warnings` | `fn warnings(&self) -> &[ValidationWarning]` | Validation warnings from preparation |
+| Method     | Signature                                    | Description                        |
+| ---------- | -------------------------------------------- | ---------------------------------- |
+| `warnings` | `fn warnings(&self) -> &[ValidationWarning]` | Validation warnings from execution |
 
 **Example:**
 
 ```rust
-let prepared = ggsql::prepare(query, &reader)?;
+let spec = reader.execute(query)?;
 
 // Check for warnings
-if !prepared.warnings().is_empty() {
-    for warning in prepared.warnings() {
+if !spec.warnings().is_empty() {
+    for warning in spec.warnings() {
         eprintln!("Warning: {}", warning.message);
     }
 }
 
 // Continue with rendering
-let json = prepared.render(&writer)?;
+let json = spec.render(&writer)?;
 ```
 
 ---
@@ -465,10 +464,10 @@ class Validated:
     # Note: tree() not exposed (tree-sitter nodes are Rust-only)
 ```
 
-#### `Prepared`
+#### `Spec`
 
 ```python
-class Prepared:
+class Spec:
     def render(self, writer: VegaLiteWriter) -> str:
         """Render to output format."""
 
@@ -512,6 +511,9 @@ def validate(query: str) -> Validated:
     Returns Validated object with query inspection and validation methods.
     """
 
-def prepare(query: str, reader: DuckDBReader) -> Prepared:
-    """Prepare a query for visualization."""
+def execute(query: str, reader: Any) -> Spec:
+    """Execute a ggsql query with a custom Python reader.
+
+    For native readers, use reader.execute() method instead.
+    """
 ```

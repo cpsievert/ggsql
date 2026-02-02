@@ -12,7 +12,7 @@ use std::path::PathBuf;
 #[cfg(feature = "duckdb")]
 use ggsql::reader::{DuckDBReader, Reader};
 #[cfg(feature = "duckdb")]
-use ggsql::{prepare, validate};
+use ggsql::validate;
 
 #[cfg(feature = "vegalite")]
 use ggsql::writer::VegaLiteWriter;
@@ -186,24 +186,24 @@ fn cmd_exec(query: String, reader: String, writer: String, output: Option<PathBu
         return;
     }
 
-    // Prepare data
-    let prepared = match prepare(&query, &db_reader) {
-        Ok(p) => p,
+    // Execute ggsql query
+    let spec = match db_reader.execute(&query) {
+        Ok(s) => s,
         Err(e) => {
-            eprintln!("Failed to prepare data: {}", e);
+            eprintln!("Failed to execute query: {}", e);
             std::process::exit(1);
         }
     };
 
     if verbose {
-        let metadata = prepared.metadata();
-        eprintln!("\nData prepared:");
+        let metadata = spec.metadata();
+        eprintln!("\nQuery executed:");
         eprintln!("  Rows: {}", metadata.rows);
         eprintln!("  Columns: {}", metadata.columns.join(", "));
         eprintln!("  Layers: {}", metadata.layer_count);
     }
 
-    if prepared.plot().layers.is_empty() {
+    if spec.plot().layers.is_empty() {
         eprintln!("No visualization specifications found");
         std::process::exit(1);
     }
@@ -222,7 +222,7 @@ fn cmd_exec(query: String, reader: String, writer: String, output: Option<PathBu
 
     // Render
     let vl_writer = VegaLiteWriter::new();
-    let json_output = match prepared.render(&vl_writer) {
+    let json_output = match spec.render(&vl_writer) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Failed to generate Vega-Lite output: {}", e);

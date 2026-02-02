@@ -152,28 +152,28 @@ DRAW line MAPPING month AS x, total AS y
 ### Quick Start
 
 ```rust
-use ggsql::{prepare, reader::DuckDBReader, writer::VegaLiteWriter};
+use ggsql::reader::{DuckDBReader, Reader};
+use ggsql::writer::VegaLiteWriter;
 
 // Create a reader
 let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
 
-// Prepare the visualization
-let prepared = ggsql::prepare(
-    "SELECT x, y FROM data VISUALISE x, y DRAW point",
-    &reader
+// Execute the ggsql query
+let spec = reader.execute(
+    "SELECT x, y FROM data VISUALISE x, y DRAW point"
 )?;
 
 // Render to Vega-Lite JSON
 let writer = VegaLiteWriter::new();
-let json = prepared.render(&writer)?;
+let json = spec.render(&writer)?;
 ```
 
 ### Core Functions
 
 | Function                 | Purpose                                                |
 | ------------------------ | ------------------------------------------------------ |
-| `prepare(query, reader)` | Main entry point: parse, execute SQL, resolve mappings |
-| `render(writer)`         | Generate output (Vega-Lite JSON) from prepared data    |
+| `reader.execute(query)`  | Main entry point: parse, execute SQL, resolve mappings |
+| `spec.render(writer)`    | Generate output (Vega-Lite JSON) from Spec             |
 | `validate(query)`        | Validate syntax + semantics, inspect query structure   |
 
 ### Key Types
@@ -188,12 +188,12 @@ let json = prepared.render(&writer)?;
 - `errors()` - Validation errors
 - `warnings()` - Validation warnings
 
-**`Prepared`** - Result of `prepare()`, ready for rendering:
+**`Spec`** - Result of `reader.execute()`, ready for rendering:
 
 - `render(writer)` - Generate output (Vega-Lite JSON)
 - `plot()` - Resolved plot specification
 - `metadata()` - Rows, columns, layer count
-- `warnings()` - Validation warnings from preparation
+- `warnings()` - Validation warnings from execution
 - `data()` / `layer_data(i)` / `stat_data(i)` - Access DataFrames
 - `sql()` / `visual()` / `layer_sql(i)` / `stat_sql(i)` - Query introspection
 
@@ -869,7 +869,7 @@ When running in Positron IDE, the extension provides enhanced functionality:
 **Features**:
 
 - PyO3-based Rust bindings compiled to a native Python extension
-- Two-stage API mirroring the Rust API: `prepare()` → `render()`
+- Two-stage API mirroring the Rust API: `reader.execute()` → `render()`
 - DuckDB reader with DataFrame registration
 - Custom Python reader support: any object with `execute_sql(sql) -> DataFrame` method
 - Works with any narwhals-compatible DataFrame (polars, pandas, etc.)
@@ -897,20 +897,19 @@ reader = ggsql.DuckDBReader("duckdb://memory")
 df = pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
 reader.register("data", df)
 
-# Prepare visualization
-prepared = ggsql.prepare(
-    "SELECT * FROM data VISUALISE x, y DRAW point",
-    reader
+# Execute visualization
+spec = reader.execute(
+    "SELECT * FROM data VISUALISE x, y DRAW point"
 )
 
 # Inspect metadata
-print(f"Rows: {prepared.metadata()['rows']}")
-print(f"Columns: {prepared.metadata()['columns']}")
-print(f"SQL: {prepared.sql()}")
+print(f"Rows: {spec.metadata()['rows']}")
+print(f"Columns: {spec.metadata()['columns']}")
+print(f"SQL: {spec.sql()}")
 
 # Render to Vega-Lite JSON
 writer = ggsql.VegaLiteWriter()
-json_output = prepared.render(writer)
+json_output = spec.render(writer)
 ```
 
 **Convenience Function** (`render_altair`):
@@ -943,22 +942,23 @@ print(f"Errors: {validated.errors()}")
 
 **Classes**:
 
-| Class                      | Description                                  |
-| -------------------------- | -------------------------------------------- |
-| `DuckDBReader(connection)` | Database reader with DataFrame registration  |
-| `VegaLiteWriter()`         | Vega-Lite JSON output writer                 |
-| `Validated`                | Result of `validate()` with query inspection |
-| `Prepared`                 | Result of `prepare()`, ready for rendering   |
+| Class                      | Description                                      |
+| -------------------------- | ------------------------------------------------ |
+| `DuckDBReader(connection)` | Database reader with DataFrame registration      |
+| `VegaLiteWriter()`         | Vega-Lite JSON output writer                     |
+| `Validated`                | Result of `validate()` with query inspection     |
+| `Spec`                     | Result of `reader.execute()`, ready for rendering |
 
 **Functions**:
 
-| Function                 | Description                                       |
-| ------------------------ | ------------------------------------------------- |
-| `validate(query)`        | Syntax/semantic validation with query inspection  |
-| `prepare(query, reader)` | Full preparation (reader can be native or custom) |
-| `render_altair(df, viz)` | Convenience: render DataFrame to Altair chart     |
+| Function                   | Description                                       |
+| -------------------------- | ------------------------------------------------- |
+| `validate(query)`          | Syntax/semantic validation with query inspection  |
+| `reader.execute(query)`    | Execute ggsql query, return Spec                  |
+| `execute(query, reader)`   | Execute with custom reader (bridge path)          |
+| `render_altair(df, viz)`   | Convenience: render DataFrame to Altair chart     |
 
-**Prepared Object Methods**:
+**Spec Methods**:
 
 | Method           | Description                                  |
 | ---------------- | -------------------------------------------- |
@@ -988,9 +988,9 @@ class MyReader:
     def execute_sql(self, sql: str) -> pl.DataFrame:
         return pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
 
-# Use custom reader with prepare()
+# Use custom reader with ggsql.execute()
 reader = MyReader()
-prepared = ggsql.prepare(
+spec = ggsql.execute(
     "SELECT * FROM data VISUALISE x, y DRAW point",
     reader
 )

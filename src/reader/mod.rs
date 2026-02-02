@@ -7,6 +7,7 @@
 //!
 //! All readers implement the `Reader` trait, which provides:
 //! - SQL query execution → DataFrame conversion
+//! - Visualization query execution → Spec
 //! - Optional DataFrame registration for queryable tables
 //! - Connection management and error handling
 //!
@@ -14,18 +15,28 @@
 //!
 //! ```rust,ignore
 //! use ggsql::reader::{Reader, DuckDBReader};
+//! use ggsql::writer::VegaLiteWriter;
 //!
-//! // Basic usage
+//! // Execute a ggsql query
 //! let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
-//! let df = reader.execute_sql("SELECT * FROM table")?;
+//! let spec = reader.execute("SELECT 1 as x, 2 as y VISUALISE x, y DRAW point")?;
+//!
+//! // Render to Vega-Lite JSON
+//! let writer = VegaLiteWriter::new();
+//! let json = spec.render(&writer)?;
 //!
 //! // With DataFrame registration
 //! let mut reader = DuckDBReader::from_connection_string("duckdb://memory")?;
 //! reader.register("my_table", some_dataframe)?;
-//! let result = reader.execute_sql("SELECT * FROM my_table")?;
+//! let spec = reader.execute("SELECT * FROM my_table VISUALISE x, y DRAW point")?;
 //! ```
 
 use crate::{DataFrame, GgsqlError, Result};
+
+#[cfg(feature = "duckdb")]
+use crate::api::{validate, Spec, ValidationWarning};
+#[cfg(feature = "duckdb")]
+use crate::execute::prepare_data_with_executor;
 
 #[cfg(feature = "duckdb")]
 pub mod duckdb;
@@ -107,5 +118,57 @@ pub trait Reader {
     /// `true` if [`register`](Reader::register) is implemented, `false` otherwise.
     fn supports_register(&self) -> bool {
         false
+    }
+
+    /// Execute a ggsql query and return the visualization specification.
+    ///
+    /// This is the main entry point for creating visualizations. It parses the query,
+    /// executes the SQL portion, and returns a `Spec` ready for rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The ggsql query (SQL + VISUALISE clause)
+    ///
+    /// # Returns
+    ///
+    /// A `Spec` containing the resolved visualization specification and data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The query syntax is invalid
+    /// - The query has no VISUALISE clause
+    /// - The SQL execution fails
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use ggsql::reader::{Reader, DuckDBReader};
+    /// use ggsql::writer::VegaLiteWriter;
+    ///
+    /// let reader = DuckDBReader::from_connection_string("duckdb://memory")?;
+    /// let spec = reader.execute("SELECT 1 as x, 2 as y VISUALISE x, y DRAW point")?;
+    ///
+    /// let writer = VegaLiteWriter::new();
+    /// let json = spec.render(&writer)?;
+    /// ```
+    #[cfg(feature = "duckdb")]
+    fn execute(&self, query: &str) -> Result<Spec> {
+        // Run validation first to capture warnings
+        let validated = validate(query)?;
+        let warnings: Vec<ValidationWarning> = validated.warnings().to_vec();
+
+        // Prepare data (this also validates, but we want the warnings from above)
+        let prepared_data = prepare_data_with_executor(query, |sql| self.execute_sql(sql))?;
+
+        Ok(Spec::new(
+            prepared_data.spec,
+            prepared_data.data,
+            prepared_data.sql,
+            prepared_data.visual,
+            prepared_data.layer_sql,
+            prepared_data.stat_sql,
+            warnings,
+        ))
     }
 }

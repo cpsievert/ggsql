@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use std::io::Cursor;
 
-use ggsql::api::{prepare as rust_prepare, validate as rust_validate, Prepared, ValidationWarning};
+use ggsql::api::{validate as rust_validate, Spec, ValidationWarning};
 use ggsql::reader::{DuckDBReader as RustDuckDBReader, Reader};
 use ggsql::writer::VegaLiteWriter as RustVegaLiteWriter;
 use ggsql::GgsqlError;
@@ -120,7 +120,7 @@ fn warnings_to_pylist(py: Python<'_>, warnings: &[ValidationWarning]) -> PyResul
 
 /// Bridges a Python reader object to the Rust Reader trait.
 ///
-/// This allows any Python object with an `execute(sql: str) -> polars.DataFrame`
+/// This allows any Python object with an `execute_sql(sql: str) -> polars.DataFrame`
 /// method to be used as a ggsql reader.
 struct PyReaderBridge {
     obj: Py<PyAny>,
@@ -130,9 +130,9 @@ impl Reader for PyReaderBridge {
     fn execute_sql(&self, sql: &str) -> ggsql::Result<DataFrame> {
         Python::attach(|py| {
             let bound = self.obj.bind(py);
-            let result = bound
-                .call_method1("execute_sql", (sql,))
-                .map_err(|e| GgsqlError::ReaderError(format!("Reader.execute_sql() failed: {}", e)))?;
+            let result = bound.call_method1("execute_sql", (sql,)).map_err(|e| {
+                GgsqlError::ReaderError(format!("Reader.execute_sql() failed: {}", e))
+            })?;
             py_to_polars_inner(&result).map_err(|e| GgsqlError::ReaderError(e.to_string()))
         })
     }
@@ -170,8 +170,8 @@ macro_rules! try_native_readers {
     ($query:expr, $reader:expr, $($native_type:ty),*) => {{
         $(
             if let Ok(native) = $reader.downcast::<$native_type>() {
-                return rust_prepare($query, &native.borrow().inner)
-                    .map(|p| PyPrepared { inner: p })
+                return native.borrow().inner.execute($query)
+                    .map(|s| PySpec { inner: s })
                     .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()));
             }
         )*
@@ -281,6 +281,39 @@ impl PyDuckDBReader {
     fn supports_register(&self) -> bool {
         self.inner.supports_register()
     }
+
+    /// Execute a ggsql query and return the visualization specification.
+    ///
+    /// This is the main entry point for creating visualizations. It parses
+    /// the query, executes the SQL portion, and returns a PySpec ready
+    /// for rendering.
+    ///
+    /// Parameters
+    /// ----------
+    /// query : str
+    ///     The ggsql query (SQL + VISUALISE clause).
+    ///
+    /// Returns
+    /// -------
+    /// Spec
+    ///     The resolved visualization specification ready for rendering.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If the query syntax is invalid, has no VISUALISE clause, or SQL execution fails.
+    ///
+    /// Examples
+    /// --------
+    /// >>> reader = DuckDBReader("duckdb://memory")
+    /// >>> spec = reader.execute("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point")
+    /// >>> json_output = spec.render(VegaLiteWriter())
+    fn execute(&self, query: &str) -> PyResult<PySpec> {
+        self.inner
+            .execute(query)
+            .map(|s| PySpec { inner: s })
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
+    }
 }
 
 // ============================================================================
@@ -289,13 +322,13 @@ impl PyDuckDBReader {
 
 /// Vega-Lite JSON output writer.
 ///
-/// Converts prepared visualization specifications to Vega-Lite v6 JSON.
+/// Converts visualization specifications to Vega-Lite v6 JSON.
 ///
 /// Examples
 /// --------
 /// >>> writer = VegaLiteWriter()
-/// >>> prepared = prepare("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point", reader)
-/// >>> json_output = prepared.render(writer)
+/// >>> spec = reader.execute("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point")
+/// >>> json_output = spec.render(writer)
 #[pyclass(name = "VegaLiteWriter")]
 struct PyVegaLiteWriter {
     inner: RustVegaLiteWriter,
@@ -399,26 +432,26 @@ impl PyValidated {
 }
 
 // ============================================================================
-// PyPrepared
+// PySpec
 // ============================================================================
 
-/// Result of prepare(), ready for rendering.
+/// Result of reader.execute(), ready for rendering.
 ///
 /// Contains the resolved plot specification, data, and metadata.
 /// Use render() to generate Vega-Lite JSON output.
 ///
 /// Examples
 /// --------
-/// >>> prepared = prepare("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point", reader)
-/// >>> print(f"Rows: {prepared.metadata()['rows']}")
-/// >>> json_output = prepared.render(VegaLiteWriter())
-#[pyclass(name = "Prepared")]
-struct PyPrepared {
-    inner: Prepared,
+/// >>> spec = reader.execute("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point")
+/// >>> print(f"Rows: {spec.metadata()['rows']}")
+/// >>> json_output = spec.render(VegaLiteWriter())
+#[pyclass(name = "Spec")]
+struct PySpec {
+    inner: Spec,
 }
 
 #[pymethods]
-impl PyPrepared {
+impl PySpec {
     /// Render to output format (Vega-Lite JSON).
     ///
     /// Parameters
@@ -626,21 +659,24 @@ fn validate(query: &str) -> PyResult<PyValidated> {
     })
 }
 
-/// Prepare a query for visualization. Main entry point for the Rust API.
+/// Execute a ggsql query using a custom Python reader.
+///
+/// This is a convenience function for custom readers. For native readers,
+/// prefer using `reader.execute()` directly.
 ///
 /// Parameters
 /// ----------
 /// query : str
-///     The ggsql query to prepare.
-/// reader : DuckDBReader | object
-///     The database reader to execute SQL against. Can be a native DuckDBReader
+///     The ggsql query to execute.
+/// reader : Reader | object
+///     The database reader to execute SQL against. Can be a native Reader
 ///     for optimal performance, or any Python object with an
-///     `execute(sql: str) -> polars.DataFrame` method.
+///     `execute_sql(sql: str) -> polars.DataFrame` method.
 ///
 /// Returns
 /// -------
-/// Prepared
-///     A prepared visualization ready for rendering.
+/// Spec
+///     The resolved visualization specification ready for rendering.
 ///
 /// Raises
 /// ------
@@ -649,19 +685,19 @@ fn validate(query: &str) -> PyResult<PyValidated> {
 ///
 /// Examples
 /// --------
-/// >>> # Using native reader (fast path)
+/// >>> # Using native reader (prefer reader.execute() instead)
 /// >>> reader = DuckDBReader("duckdb://memory")
-/// >>> prepared = prepare("SELECT 1 AS x, 2 AS y VISUALISE x, y DRAW point", reader)
-/// >>> json_output = prepared.render(VegaLiteWriter())
+/// >>> spec = execute("SELECT 1 AS x, 2 AS Y VISUALISE x, y DRAW point", reader)
+/// >>> json_output = spec.render(VegaLiteWriter())
 ///
 /// >>> # Using custom Python reader
 /// >>> class MyReader:
-/// ...     def execute(self, sql: str) -> pl.DataFrame:
+/// ...     def execute_sql(self, sql: str) -> pl.DataFrame:
 /// ...         return pl.DataFrame({"x": [1, 2, 3], "y": [10, 20, 30]})
 /// >>> reader = MyReader()
-/// >>> prepared = prepare("SELECT * FROM data VISUALISE x, y DRAW point", reader)
+/// >>> spec = execute("SELECT * FROM data VISUALISE x, y DRAW point", reader)
 #[pyfunction]
-fn prepare(query: &str, reader: &Bound<'_, PyAny>) -> PyResult<PyPrepared> {
+fn execute(query: &str, reader: &Bound<'_, PyAny>) -> PyResult<PySpec> {
     // Fast path: try all known native reader types
     // Add new native readers to this list as they're implemented
     try_native_readers!(query, reader, PyDuckDBReader);
@@ -670,8 +706,9 @@ fn prepare(query: &str, reader: &Bound<'_, PyAny>) -> PyResult<PyPrepared> {
     let bridge = PyReaderBridge {
         obj: reader.clone().unbind(),
     };
-    rust_prepare(query, &bridge)
-        .map(|p| PyPrepared { inner: p })
+    bridge
+        .execute(query)
+        .map(|s| PySpec { inner: s })
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
 }
 
@@ -685,11 +722,11 @@ fn _ggsql(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDuckDBReader>()?;
     m.add_class::<PyVegaLiteWriter>()?;
     m.add_class::<PyValidated>()?;
-    m.add_class::<PyPrepared>()?;
+    m.add_class::<PySpec>()?;
 
     // Functions
     m.add_function(wrap_pyfunction!(validate, m)?)?;
-    m.add_function(wrap_pyfunction!(prepare, m)?)?;
+    m.add_function(wrap_pyfunction!(execute, m)?)?;
 
     Ok(())
 }
