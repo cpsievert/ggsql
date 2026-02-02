@@ -33,7 +33,7 @@
 
 use std::collections::HashMap;
 
-use crate::api::{validate, ValidationWarning};
+use crate::validate::{validate, ValidationWarning};
 use crate::execute::prepare_data_with_executor;
 use crate::plot::Plot;
 use crate::{DataFrame, GgsqlError, Result};
@@ -206,5 +206,149 @@ pub trait Reader {
             prepared_data.stat_sql,
             warnings,
         ))
+    }
+}
+
+#[cfg(test)]
+#[cfg(all(feature = "duckdb", feature = "vegalite"))]
+mod tests {
+    use super::*;
+    use crate::writer::VegaLiteWriter;
+
+    #[test]
+    fn test_execute_and_render() {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+        let spec = reader
+            .execute("SELECT 1 as x, 2 as y VISUALISE x, y DRAW point")
+            .unwrap();
+
+        assert_eq!(spec.plot().layers.len(), 1);
+        assert_eq!(spec.metadata().layer_count, 1);
+        assert!(spec.data().is_some());
+
+        let writer = VegaLiteWriter::new();
+        let result = spec.render(&writer).unwrap();
+        assert!(result.contains("point"));
+    }
+
+    #[test]
+    fn test_execute_metadata() {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+        let spec = reader
+            .execute(
+                "SELECT * FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(x, y) VISUALISE x, y DRAW point",
+            )
+            .unwrap();
+
+        let metadata = spec.metadata();
+        assert_eq!(metadata.rows, 3);
+        assert_eq!(metadata.columns.len(), 2);
+        assert!(metadata.columns.contains(&"x".to_string()));
+        assert!(metadata.columns.contains(&"y".to_string()));
+        assert_eq!(metadata.layer_count, 1);
+    }
+
+    #[test]
+    fn test_execute_with_cte() {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+        let query = r#"
+            WITH data AS (
+                SELECT * FROM (VALUES (1, 10), (2, 20)) AS t(x, y)
+            )
+            SELECT * FROM data
+            VISUALISE x, y DRAW point
+        "#;
+
+        let spec = reader.execute(query).unwrap();
+
+        assert_eq!(spec.plot().layers.len(), 1);
+        assert!(spec.data().is_some());
+        let df = spec.data().unwrap();
+        assert_eq!(df.height(), 2);
+    }
+
+    #[test]
+    fn test_render_multi_layer() {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+        let query = r#"
+            SELECT * FROM (VALUES (1, 10), (2, 20), (3, 30)) AS t(x, y)
+            VISUALISE
+            DRAW point MAPPING x AS x, y AS y
+            DRAW line MAPPING x AS x, y AS y
+        "#;
+
+        let spec = reader.execute(query).unwrap();
+        let writer = VegaLiteWriter::new();
+        let result = spec.render(&writer).unwrap();
+
+        assert!(result.contains("layer"));
+    }
+
+    #[test]
+    fn test_register_and_query() {
+        use polars::prelude::*;
+
+        let mut reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+
+        let df = df! {
+            "x" => [1i32, 2, 3],
+            "y" => [10i32, 20, 30],
+        }
+        .unwrap();
+
+        reader.register("my_data", df).unwrap();
+
+        let query = "SELECT * FROM my_data VISUALISE x, y DRAW point";
+        let spec = reader.execute(query).unwrap();
+
+        assert_eq!(spec.metadata().rows, 3);
+        assert!(spec.metadata().columns.contains(&"x".to_string()));
+
+        let writer = VegaLiteWriter::new();
+        let result = spec.render(&writer).unwrap();
+        assert!(result.contains("point"));
+    }
+
+    #[test]
+    fn test_register_and_join() {
+        use polars::prelude::*;
+
+        let mut reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+
+        let sales = df! {
+            "id" => [1i32, 2, 3],
+            "amount" => [100i32, 200, 300],
+            "product_id" => [1i32, 1, 2],
+        }
+        .unwrap();
+
+        let products = df! {
+            "id" => [1i32, 2],
+            "name" => ["Widget", "Gadget"],
+        }
+        .unwrap();
+
+        reader.register("sales", sales).unwrap();
+        reader.register("products", products).unwrap();
+
+        let query = r#"
+            SELECT s.id, s.amount, p.name
+            FROM sales s
+            JOIN products p ON s.product_id = p.id
+            VISUALISE id AS x, amount AS y
+            DRAW bar
+        "#;
+
+        let spec = reader.execute(query).unwrap();
+        assert_eq!(spec.metadata().rows, 3);
+    }
+
+    #[test]
+    fn test_execute_no_viz_fails() {
+        let reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
+        let query = "SELECT 1 as x, 2 as y";
+
+        let result = reader.execute(query);
+        assert!(result.is_err());
     }
 }

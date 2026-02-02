@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::api::ValidationWarning;
+use crate::validate::ValidationWarning;
 use crate::naming;
 use crate::plot::Plot;
 use crate::writer::Writer;

@@ -46,15 +46,15 @@ pub mod writer;
 #[cfg(feature = "duckdb")]
 pub mod execute;
 
-pub mod api;
+pub mod validate;
 
 // Re-export key types for convenience
 pub use plot::{
     AestheticValue, DataSource, Facet, Geom, Layer, Mappings, Plot, Scale, SqlExpression,
 };
 
-// Re-export API types and functions
-pub use api::{validate, Location, Validated, ValidationError, ValidationWarning};
+// Re-export validation types and functions
+pub use validate::{validate, Location, Validated, ValidationError, ValidationWarning};
 
 // Re-export reader types
 pub use reader::{Metadata, Spec};
@@ -779,4 +779,5 @@ mod integration_tests {
         assert_eq!(data["__ggsql_const_stroke_0__"], "value");
         assert_eq!(data["__ggsql_const_stroke_1__"], "value");
     }
+
 }
