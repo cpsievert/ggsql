@@ -1096,38 +1096,6 @@ impl Writer for VegaLiteWriter {
                 })
             };
 
-            // For Bar geom, set mark with width parameter
-            if layer.geom.geom_type() == GeomType::Bar {
-                use crate::plot::ParameterValue;
-                let width = layer
-                    .parameters
-                    .get("width")
-                    .and_then(|p| match p {
-                        ParameterValue::Number(n) => Some(*n),
-                        _ => None,
-                    })
-                    .unwrap_or(0.9);
-                layer_spec["mark"] = json!({
-                    "type": "bar",
-                    "width": {"band": width}
-                });
-            }
-
-            // Add window transform for Path geoms to preserve data order
-            // (Line geom uses Vega-Lite's default x-axis sorting)
-            if layer.geom.geom_type() == GeomType::Path {
-                let mut window_transform = json!({
-                    "window": [{"op": "row_number", "as": naming::ORDER_COLUMN}]
-                });
-
-                // Add groupby if partition_by is present (restarts numbering per group)
-                if !layer.partition_by.is_empty() {
-                    window_transform["groupby"] = json!(layer.partition_by);
-                }
-
-                layer_spec["transform"] = json!([window_transform]);
-            }
-
             // Build encoding for this layer
             // Track which aesthetic families have been titled to ensure only one title per family
             let mut encoding = Map::new();
@@ -1165,15 +1133,48 @@ impl Writer for VegaLiteWriter {
                 encoding.insert("y2".to_string(), json!({"datum": 0}));
             }
 
-            // Add order encoding for Path geoms (preserves data order instead of x-axis sorting)
-            if layer.geom.geom_type() == GeomType::Path {
-                encoding.insert(
-                    "order".to_string(),
-                    json!({
-                        "field": naming::ORDER_COLUMN,
-                        "type": "quantitative"
-                    }),
-                );
+            match layer.geom.geom_type() {
+                GeomType::Bar => {
+                    // For Bar geom, set mark with width parameter
+                    use crate::plot::ParameterValue;
+                    let width = layer
+                        .parameters
+                        .get("width")
+                        .and_then(|p| match p {
+                            ParameterValue::Number(n) => Some(*n),
+                            _ => None,
+                        })
+                        .unwrap_or(0.9);
+                    layer_spec["mark"] = json!({
+                        "type": "bar",
+                        "width": {"band": width}
+                    });
+                }
+                GeomType::Path => {
+                    // Add window transform for Path geoms to preserve data order
+                    // (Line geom uses Vega-Lite's default x-axis sorting)
+                    let mut window_transform = json!({
+                        "window": [{"op": "row_number", "as": naming::ORDER_COLUMN}]
+                    });
+
+                    // Add groupby if partition_by is present (restarts numbering per group)
+                    if !layer.partition_by.is_empty() {
+                        window_transform["groupby"] = json!(layer.partition_by);
+                    }
+
+                    layer_spec["transform"] = json!([window_transform]);
+                    // Add order encoding for Path geoms (preserves data order instead of x-axis sorting)
+                    encoding.insert(
+                        "order".to_string(),
+                        json!({
+                            "field": naming::ORDER_COLUMN,
+                            "type": "quantitative"
+                        }),
+                    );
+                }
+                GeomType::Ribbon => render_ribbon(&mut encoding),
+                GeomType::Area => render_area(&mut encoding, layer)?,
+                _ => {}
             }
 
             // Apply guides to first layer's encoding only (they apply globally)
@@ -1307,6 +1308,39 @@ impl Writer for VegaLiteWriter {
 
         Ok(())
     }
+}
+
+fn render_ribbon(encoding: &mut Map<String, Value>) {
+    if let Some(ymax) = encoding.remove("ymax") {
+        encoding.insert("y".to_string(), ymax);
+    }
+    if let Some(ymin) = encoding.remove("ymin") {
+        encoding.insert("y2".to_string(), ymin);
+    }
+}
+
+fn render_area(encoding: &mut Map<String, Value>, layer: &Layer) -> Result<()> {
+    if let Some(mut y) = encoding.remove("y") {
+        let stack_value;
+        if let Some(ParameterValue::String(stack)) = layer.parameters.get("stacking") {
+            stack_value = match stack.as_str() {
+                "on" => json!("zero"),
+                "off" => Value::Null,
+                "fill" => json!("normalize"),
+                _ => {
+                    return Err(GgsqlError::ValidationError(format!(
+                        "Area layer's `stacking` must be \"on\", \"off\" or \"fill\", not \"{}\"",
+                        stack
+                    )));
+                }
+            }
+        } else {
+            stack_value = Value::Null
+        }
+        y["stack"] = stack_value;
+        encoding.insert("y".to_string(), y);
+    }
+    Ok(())
 }
 
 fn render_boxplot(
@@ -4214,7 +4248,7 @@ mod tests {
         let writer = VegaLiteWriter::new();
 
         let mut spec = Plot::new();
-        let layer = Layer::new(Geom::ribbon())
+        let layer = Layer::new(Geom::errorbar())
             .with_aesthetic(
                 "x".to_string(),
                 AestheticValue::standard_column("date".to_string()),
@@ -4272,6 +4306,104 @@ mod tests {
             !(ymin_has_title && ymax_has_title),
             "Only one of ymin/ymax should get the title (first wins per family)"
         );
+    }
+
+    // ========================================
+    // render_ribbon Tests
+    // ========================================
+
+    #[test]
+    fn test_render_ribbon_translates_ymin_ymax() {
+        let mut encoding = Map::new();
+        encoding.insert(
+            "x".to_string(),
+            json!({"field": "x", "type": "quantitative"}),
+        );
+        encoding.insert(
+            "ymin".to_string(),
+            json!({"field": "lower", "type": "quantitative"}),
+        );
+        encoding.insert(
+            "ymax".to_string(),
+            json!({"field": "upper", "type": "quantitative"}),
+        );
+
+        render_ribbon(&mut encoding);
+
+        // ymax should become y
+        assert_eq!(encoding.get("y").unwrap()["field"], "upper");
+
+        // ymin should become y2
+        assert_eq!(encoding.get("y2").unwrap()["field"], "lower");
+
+        // Original ymin and ymax should be removed
+        assert!(!encoding.contains_key("ymin"));
+        assert!(!encoding.contains_key("ymax"));
+    }
+
+    // ========================================
+    // render_area Tests
+    // ========================================
+
+    #[test]
+    fn test_render_area_stacking_values() {
+        let test_cases = vec![
+            (Some("on"), json!("zero")),
+            (Some("off"), Value::Null),
+            (Some("fill"), json!("normalize")),
+            (None, Value::Null),
+        ];
+
+        for (stacking_param, expected_stack) in test_cases {
+            let mut encoding = Map::new();
+            encoding.insert(
+                "y".to_string(),
+                json!({"field": "value", "type": "quantitative"}),
+            );
+
+            let mut layer = Layer::new(Geom::area());
+            if let Some(value) = stacking_param {
+                layer = layer.with_parameter(
+                    "stacking".to_string(),
+                    ParameterValue::String(value.to_string()),
+                );
+            }
+
+            render_area(&mut encoding, &layer).unwrap();
+
+            assert_eq!(
+                encoding.get("y").unwrap()["stack"],
+                expected_stack,
+                "stacking={:?} should produce stack={:?}",
+                stacking_param,
+                expected_stack
+            );
+        }
+    }
+
+    #[test]
+    fn test_render_area_stacking_invalid() {
+        let mut encoding = Map::new();
+        encoding.insert(
+            "y".to_string(),
+            json!({"field": "value", "type": "quantitative"}),
+        );
+
+        let layer = Layer::new(Geom::area()).with_parameter(
+            "stacking".to_string(),
+            ParameterValue::String("invalid".to_string()),
+        );
+
+        let result = render_area(&mut encoding, &layer);
+
+        assert!(result.is_err());
+        match result {
+            Err(GgsqlError::ValidationError(msg)) => {
+                assert!(msg.contains("stacking"));
+                assert!(msg.contains("invalid"));
+            }
+            _ => panic!("Expected ValidationError"),
+        }
     }
 
     #[test]
