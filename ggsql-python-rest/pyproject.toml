@@ -12,11 +12,14 @@ license = { text = "MIT" }
 dependencies = [
     "fastapi>=0.100",
     "uvicorn>=0.20",
-    "ggsql>=0.1.0",
+    "ggsql",
     "sqlalchemy>=2.0",
     "polars>=1.0",
     "python-multipart>=0.0.6",
 ]
+
+[tool.uv.sources]
+ggsql = { path = "../ggsql-python", editable = true }
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "httpx>=0.24"]
@@ -24,3 +27,9 @@ dev = ["ruff>=0.1"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ggsql_rest"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+]
