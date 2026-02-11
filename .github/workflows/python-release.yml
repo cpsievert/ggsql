@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHON_VERSION: "3.10"
+  NODE_VERSION: "20"
+
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -20,13 +24,13 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --interpreter python3.10
+          args: --release --out dist --interpreter python${{ env.PYTHON_VERSION }}
           working-directory: ggsql-python
           manylinux: auto
           before-script-linux: |
@@ -56,11 +60,11 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install tree-sitter-cli
         run: npm install -g tree-sitter-cli
@@ -69,7 +73,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --interpreter python3.10
+          args: --release --out dist --interpreter python${{ env.PYTHON_VERSION }}
           working-directory: ggsql-python
 
       - uses: actions/upload-artifact@v4
@@ -84,11 +88,11 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install tree-sitter-cli
         run: npm install -g tree-sitter-cli
@@ -97,7 +101,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: x64
-          args: --release --out dist --interpreter python3.10
+          args: --release --out dist --interpreter python${{ env.PYTHON_VERSION }}
           working-directory: ggsql-python
 
       - uses: actions/upload-artifact@v4
