@@ -5,9 +5,8 @@
 use crate::reader::data::init_builtin_data;
 use crate::reader::{connection::ConnectionInfo, Reader};
 use crate::{DataFrame, GgsqlError, Result};
-use arrow::datatypes::DataType as ArrowDataType;
 use arrow::ipc::reader::FileReader;
-use arrow::record_batch::RecordBatch;
+use duckdb::vtab::arrow::{arrow_recordbatch_to_query_params, ArrowVTab};
 use duckdb::{params, Connection};
 use polars::io::SerWriter;
 use polars::prelude::*;
@@ -72,6 +71,12 @@ impl DuckDBReader {
             }
         };
 
+        // Register Arrow virtual table function for DataFrame registration
+        conn.register_table_function::<ArrowVTab>("arrow")
+            .map_err(|e| {
+                GgsqlError::ReaderError(format!("Failed to register arrow function: {}", e))
+            })?;
+
         Ok(Self {
             conn,
             registered_tables: HashSet::new(),
@@ -125,8 +130,8 @@ fn validate_table_name(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Convert a Polars DataFrame to an Arrow RecordBatch via IPC serialization
-fn dataframe_to_record_batch(df: &DataFrame) -> Result<RecordBatch> {
+/// Convert a Polars DataFrame to DuckDB Arrow query parameters via IPC serialization
+fn dataframe_to_arrow_params(df: DataFrame) -> Result<[usize; 2]> {
     // Serialize DataFrame to IPC format
     let mut buffer = Vec::new();
     {
@@ -150,61 +155,15 @@ fn dataframe_to_record_batch(df: &DataFrame) -> Result<RecordBatch> {
         ));
     }
 
-    if batches.len() == 1 {
-        Ok(batches.into_iter().next().unwrap())
+    // For single batch, use directly; for multiple, concatenate
+    let rb = if batches.len() == 1 {
+        batches.into_iter().next().unwrap()
     } else {
         arrow::compute::concat_batches(&batches[0].schema(), &batches)
-            .map_err(|e| GgsqlError::ReaderError(format!("Failed to concat batches: {}", e)))
-    }
-}
+            .map_err(|e| GgsqlError::ReaderError(format!("Failed to concat batches: {}", e)))?
+    };
 
-/// Map an Arrow data type to a DuckDB SQL type name
-fn arrow_type_to_duckdb_sql(dt: &ArrowDataType) -> Result<&'static str> {
-    Ok(match dt {
-        ArrowDataType::Boolean => "BOOLEAN",
-        ArrowDataType::Int8 => "TINYINT",
-        ArrowDataType::Int16 => "SMALLINT",
-        ArrowDataType::Int32 => "INTEGER",
-        ArrowDataType::Int64 => "BIGINT",
-        ArrowDataType::UInt8 => "UTINYINT",
-        ArrowDataType::UInt16 => "USMALLINT",
-        ArrowDataType::UInt32 => "UINTEGER",
-        ArrowDataType::UInt64 => "UBIGINT",
-        ArrowDataType::Float16 | ArrowDataType::Float32 => "FLOAT",
-        ArrowDataType::Float64 => "DOUBLE",
-        ArrowDataType::Utf8 | ArrowDataType::LargeUtf8 | ArrowDataType::Utf8View => "VARCHAR",
-        ArrowDataType::Binary | ArrowDataType::LargeBinary | ArrowDataType::BinaryView => "BLOB",
-        ArrowDataType::Date32 | ArrowDataType::Date64 => "DATE",
-        ArrowDataType::Timestamp(_, _) => "TIMESTAMP",
-        ArrowDataType::Time32(_) | ArrowDataType::Time64(_) => "TIME",
-        ArrowDataType::Duration(_) => "INTERVAL",
-        ArrowDataType::Null => "INTEGER",
-        _ => {
-            return Err(GgsqlError::ReaderError(format!(
-                "Unsupported Arrow type for DuckDB registration: {:?}",
-                dt
-            )))
-        }
-    })
-}
-
-/// Generate a CREATE TEMP TABLE statement from an Arrow RecordBatch schema
-fn create_table_ddl(name: &str, rb: &RecordBatch) -> Result<String> {
-    let schema = rb.schema();
-    let columns: Vec<String> = schema
-        .fields()
-        .iter()
-        .map(|field| {
-            let sql_type = arrow_type_to_duckdb_sql(field.data_type())?;
-            Ok(format!("\"{}\" {}", field.name(), sql_type))
-        })
-        .collect::<Result<Vec<_>>>()?;
-
-    Ok(format!(
-        "CREATE TEMP TABLE \"{}\" ({})",
-        name,
-        columns.join(", ")
-    ))
+    Ok(arrow_recordbatch_to_query_params(rb))
 }
 
 /// Helper struct for building typed columns from rows
@@ -557,30 +516,52 @@ impl Reader for DuckDBReader {
             )));
         }
 
-        // Convert to Arrow RecordBatch, create the table, and bulk-insert via
-        // the Appender API.  The appender automatically chunks large batches to
-        // stay within DuckDB's internal STANDARD_VECTOR_SIZE (2048) limit, so we
-        // don't need to manage chunking ourselves.
-        let rb = dataframe_to_record_batch(&df)?;
+        // DuckDB's Arrow virtual table function (in duckdb-rs) writes an entire
+        // RecordBatch into a single DataChunk whose vectors have a fixed capacity
+        // of STANDARD_VECTOR_SIZE (2048). Passing a RecordBatch with more rows
+        // causes a panic. Work around this by chunking large DataFrames.
+        const MAX_ARROW_BATCH_ROWS: usize = 2048;
+        let total_rows = df.height();
 
-        let ddl = create_table_ddl(name, &rb)?;
-        self.conn.execute(&ddl, []).map_err(|e| {
-            GgsqlError::ReaderError(format!("Failed to create table '{}': {}", name, e))
-        })?;
+        if total_rows <= MAX_ARROW_BATCH_ROWS {
+            // Small DataFrame: register in a single batch
+            let params = dataframe_to_arrow_params(df)?;
+            let sql = format!(
+                "CREATE TEMP TABLE \"{}\" AS SELECT * FROM arrow(?, ?)",
+                name
+            );
+            self.conn.execute(&sql, params).map_err(|e| {
+                GgsqlError::ReaderError(format!("Failed to register table '{}': {}", name, e))
+            })?;
+        } else {
+            // Large DataFrame: create table from first chunk, then insert remaining chunks
+            let first_chunk = df.slice(0, MAX_ARROW_BATCH_ROWS);
+            let params = dataframe_to_arrow_params(first_chunk)?;
+            let create_sql = format!(
+                "CREATE TEMP TABLE \"{}\" AS SELECT * FROM arrow(?, ?)",
+                name
+            );
+            self.conn.execute(&create_sql, params).map_err(|e| {
+                GgsqlError::ReaderError(format!("Failed to register table '{}': {}", name, e))
+            })?;
 
-        if rb.num_rows() > 0 {
-            let mut appender = self.conn.appender(name).map_err(|e| {
-                GgsqlError::ReaderError(format!(
-                    "Failed to create appender for table '{}': {}",
-                    name, e
-                ))
-            })?;
-            appender.append_record_batch(rb).map_err(|e| {
-                GgsqlError::ReaderError(format!(
-                    "Failed to append data to table '{}': {}",
-                    name, e
-                ))
-            })?;
+            let mut offset = MAX_ARROW_BATCH_ROWS;
+            while offset < total_rows {
+                let chunk_size = std::cmp::min(MAX_ARROW_BATCH_ROWS, total_rows - offset);
+                let chunk = df.slice(offset as i64, chunk_size);
+                let params = dataframe_to_arrow_params(chunk)?;
+                let insert_sql = format!(
+                    "INSERT INTO \"{}\" SELECT * FROM arrow(?, ?)",
+                    name
+                );
+                self.conn.execute(&insert_sql, params).map_err(|e| {
+                    GgsqlError::ReaderError(format!(
+                        "Failed to insert chunk into table '{}': {}",
+                        name, e
+                    ))
+                })?;
+                offset += chunk_size;
+            }
         }
 
         // Track the table so we can unregister it later
@@ -841,8 +822,8 @@ mod tests {
 
     #[test]
     fn test_register_large_dataframe() {
-        // Verify that the appender handles DataFrames larger than DuckDB's
-        // STANDARD_VECTOR_SIZE (2048 rows) without panicking.
+        // duckdb-rs Arrow vtab has a vector capacity of 2048 rows. DataFrames
+        // larger than this must be chunked to avoid a panic.
         let mut reader = DuckDBReader::from_connection_string("duckdb://memory").unwrap();
 
         let n = 3000;
