@@ -300,6 +300,12 @@ gradient teal.
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../syntax/layer/density.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Density</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../syntax/layer/histogram.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Histogram</span></a>
   </div>
@@ -324,8 +330,20 @@ gradient teal.
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../syntax/layer/polygon.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Polygon</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../syntax/layer/ribbon.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Ribbon</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/layer/violin.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Violin</span></a>
   </div>
 </li>
       </ul>
@@ -381,8 +399,57 @@ gradient teal.
       </ul>
   </li>
           <li class="sidebar-item sidebar-item-section">
-      <span class="sidebar-item-text sidebar-link text-start">
- <span class="menu-text">Palettes</span></span>
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
+ <span class="menu-text">Aesthetics</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/0_position.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Position</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/1_color.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fill and Stroke</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/2_opacity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Opacity</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/linetype.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Linetype</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/linewidth.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Linewidth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/shape.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Shape</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax/scale/aesthetic/size.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Size</span></a>
+  </div>
+</li>
+      </ul>
   </li>
       </ul>
   </li>
@@ -446,7 +513,10 @@ gradient teal.
 <li><a href="../syntax/layer/path.html"><code>path</code></a> is like <code>line</code> above but does not sort the data but plot it according to its own order</li>
 <li><a href="../syntax/layer/area.html"><code>area</code></a> is used to display series as an area chart.</li>
 <li><a href="../syntax/layer/ribbon.html"><code>ribbon</code></a> is used to display series extrema.</li>
+<li><a href="../syntax/layer/polygon.html"><code>polygon</code></a> is used to display arbitrary shapes as polygons.</li>
 <li><a href="../syntax/layer/bar.html"><code>bar</code></a> creates a bar chart, optionally calculating y from the number of records in each bar</li>
+<li><a href="../syntax/layer/density.html"><code>density</code></a> creates univariate kernel density estimates, showing the distribution of a variable</li>
+<li><a href="../syntax/layer/violin.html"><code>violin</code></a> displays a rotated kernel density estimate</li>
 <li><a href="../syntax/layer/histogram.html"><code>histogram</code></a> bins the data along the x axis and produces a bar for each bin showing the number of records in it</li>
 <li><a href="../syntax/layer/boxplot.html"><code>boxplot</code></a> displays continuous variables as 5-number summaries</li>
 </ul>
