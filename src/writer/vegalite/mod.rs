@@ -25,13 +25,15 @@ mod data;
 mod encoding;
 mod layer;
 
-use crate::plot::layer::geom::GeomAesthetics;
 // ArrayElement is used in tests and for pattern matching; suppress unused import warning
 #[allow(unused_imports)]
 use crate::plot::ArrayElement;
 use crate::plot::ParameterValue;
 use crate::writer::Writer;
-use crate::{naming, AestheticValue, DataFrame, GgsqlError, Plot, Result};
+use crate::{
+    is_primary_positional, naming, primary_aesthetic, AestheticValue, DataFrame, GgsqlError, Plot,
+    Result,
+};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -217,7 +219,7 @@ fn build_layer_encoding(
         .mappings
         .aesthetics
         .keys()
-        .filter(|a| GeomAesthetics::primary_aesthetic(a) == a.as_str())
+        .filter(|a| primary_aesthetic(a) == a.as_str())
         .cloned()
         .collect();
 
@@ -235,12 +237,13 @@ fn build_layer_encoding(
         let channel_encoding = build_encoding_channel(aesthetic, value, &mut enc_ctx)?;
         encoding.insert(channel_name, channel_encoding);
 
-        // For binned positional aesthetics (x, y), add x2/y2 channel with bin_end column
-        // This enables proper bin width rendering in Vega-Lite
-        if matches!(aesthetic.as_str(), "x" | "y") && is_binned_aesthetic(aesthetic, spec) {
+        // For binned positional aesthetics (x, y), add xend/yend channel with bin_end column
+        // This enables proper bin width rendering in Vega-Lite (maps to x2/y2 channels)
+        if is_primary_positional(aesthetic) && is_binned_aesthetic(aesthetic, spec) {
             if let AestheticValue::Column { name: col, .. } = value {
                 let end_col = naming::bin_end_column(col);
-                let end_channel = format!("{}2", aesthetic); // "x2" or "y2"
+                let end_aesthetic = format!("{}end", aesthetic); // "xend" or "yend"
+                let end_channel = map_aesthetic_name(&end_aesthetic); // maps to "x2" or "y2"
                 encoding.insert(end_channel, json!({"field": end_col}));
             }
         }
@@ -533,7 +536,10 @@ mod tests {
         assert_eq!(map_aesthetic_name("opacity"), "opacity");
         assert_eq!(map_aesthetic_name("size"), "size");
         assert_eq!(map_aesthetic_name("shape"), "shape");
-        // Mapped aesthetics
+        // Position end aesthetics (ggsql -> Vega-Lite)
+        assert_eq!(map_aesthetic_name("xend"), "x2");
+        assert_eq!(map_aesthetic_name("yend"), "y2");
+        // Other mapped aesthetics
         assert_eq!(map_aesthetic_name("linetype"), "strokeDash");
         assert_eq!(map_aesthetic_name("linewidth"), "strokeWidth");
         assert_eq!(map_aesthetic_name("label"), "text");
