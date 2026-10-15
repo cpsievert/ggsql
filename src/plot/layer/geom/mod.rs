@@ -423,7 +423,7 @@ pub(crate) fn project_position_columns(
         })
         .collect();
     Ok(crate::sql::Select::new(dialect)
-        .select(select_list.join(", "))
+        .select_items(&select_list)
         .from_aliased(crate::sql::FromItem::Query(&inner), "__ggsql_pp__")
         .and_where(finite)
         .build())
