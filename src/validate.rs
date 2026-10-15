@@ -239,7 +239,7 @@ pub fn validate(query: &str) -> Result<Validated> {
                 // the geometry column from the result schema at execution time
                 // (see detect_geometry_column in execute/mod.rs), so don't
                 // require an explicit mapping in schema-less validation.
-                if merged.geom.aesthetics().contains("geometry") {
+                if merged.geom.aesthetics().is_required("geometry") {
                     merged
                         .mappings
                         .aesthetics
